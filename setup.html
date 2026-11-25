@@ -80,6 +80,7 @@ ubs-profport/<br>
 │   ├── app.css           ← design system (light + dark)<br>
 │   ├── config.js         ← Supabase URL + anon key<br>
 │   ├── data.js           ← Supabase REST + Auth layer<br>
+│   ├── bridge.js         ← wires the store to Supabase<br>
 │   └── core.js           ← i18n (8 langs), FX, UI helpers<br>
 └── images/<br>
 &nbsp;&nbsp;&nbsp;&nbsp;└── hero.jpg          ← hero visual
@@ -125,7 +126,8 @@ window.UBS_CONFIG = {
     <p>Then load it in each HTML page, just before <code>core.js</code>:</p>
     <pre><code>&lt;script src="assets/config.js"&gt;&lt;/script&gt;
 &lt;script src="assets/data.js"&gt;&lt;/script&gt;
-&lt;script src="assets/core.js?v=4"&gt;&lt;/script&gt;</code></pre>
+&lt;script src="assets/core.js?v=4"&gt;&lt;/script&gt;
+&lt;script src="assets/bridge.js?v=1"&gt;&lt;/script&gt;</code></pre>
 
     <div class="callout">
       <p><b>Never</b> put the <code>service_role</code> key in the browser. It bypasses Row Level Security. Keep it server-side only (an Edge Function or your own backend).</p>
@@ -183,6 +185,7 @@ git push -u origin main</code></pre>
 <script src="assets/config.js"></script>
 <script src="assets/data.js"></script>
 <script src="assets/core.js?v=4"></script>
+<script src="assets/bridge.js?v=1"></script>
 <script>
   UBS.initChrome();
   document.getElementById("langSlot").innerHTML = UBS.langSelectHTML();
