@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UBS-PROFPORT — Demo App</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+
+<div class="demo-banner" role="alert">
+  <span class="dot" aria-hidden="true"></span>
+  <span data-i18n="banner">DEMO — not a real bank. No real money, no real cards.</span>
+</div>
+
+<!-- ============ LOGIN GATE ============ -->
+<div id="loginGate" class="wrap-narrow" style="padding:56px 0 80px">
+  <div class="card pad-lg" style="max-width:460px;margin:0 auto">
+    <div class="brand" style="margin-bottom:22px"><span class="brand-mark">UB</span><span>UBS-PROFPORT</span></div>
+    <h1 style="font-size:26px" data-i18n="login.title">Sign in to the demo</h1>
+    <p class="muted" style="font-size:13.5px;margin-top:8px" data-i18n="login.sub">Use the demo account below. No real credentials are needed.</p>
+
+    <div class="card flat" style="background:var(--paper-3);margin:20px 0;padding:14px 16px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3)" data-i18n="login.demo">Demo account</div>
+      <div class="mono" style="font-size:13px;margin-top:6px">alex@demo.local</div>
+      <div class="mono" style="font-size:13px">demo1234</div>
+      <button class="btn xs ghost" id="fillDemo" type="button" style="margin-top:10px" data-i18n="login.fill">Fill demo credentials</button>
+    </div>
+
+    <form id="loginForm" class="stack gap-14" style="gap:14px">
+      <div class="field">
+        <label for="email" data-i18n="common.email">Email</label>
+        <input class="input" id="email" type="email" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label for="password" data-i18n="common.password">Password</label>
+        <input class="input" id="password" type="password" autocomplete="current-password" required>
+      </div>
+      <div id="loginError" class="pill danger hide" style="justify-content:center"></div>
+      <button class="btn block" type="submit" data-i18n="common.signin">Sign in</button>
+    </form>
+
+    <div class="row gap-10" style="margin-top:18px;justify-content:space-between;flex-wrap:wrap">
+      <a href="index.html" style="font-size:12.5px;color:var(--text-2)">← <span data-i18n="nav.home">Home</span></a>
+      <a href="admin.html" style="font-size:12.5px;color:var(--text-2)" data-i18n="nav.admin">Admin</a>
+    </div>
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="appRoot" class="app-shell hide">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><span class="brand-mark">UB</span><span>UBS-PROFPORT</span></div>
+
+    <div class="side-label" data-i18n="nav.overview">Overview</div>
+    <a class="side-link active" data-view="overview">${icon:grid}<span data-i18n="nav.overview">Overview</span></a>
+    <a class="side-link" data-view="cards">${icon:card}<span data-i18n="nav.cards">Cards</span></a>
+
+    <div class="side-label" data-i18n="nav.transfer">Transfer</div>
+    <a class="side-link" data-view="wire">${icon:send}<span data-i18n="nav.transfer">Transfer</span></a>
+    <a class="side-link" data-view="internal">${icon:refresh}<span data-i18n="act.internal">Internal transfer</span></a>
+    <a class="side-link" data-view="statement">${icon:doc}<span data-i18n="nav.statement">Statement</span></a>
+
+    <div class="side-label" data-i18n="nav.loans">Loans</div>
+    <a class="side-link" data-view="loans">${icon:loan}<span data-i18n="nav.loans">Loans</span></a>
+    <a class="side-link" data-view="bills">${icon:bill}<span data-i18n="nav.bills">Pay bills</span></a>
+    <a class="side-link" data-view="atm">${icon:atm}<span data-i18n="nav.atm">ATM card</span></a>
+    <a class="side-link" data-view="invest">${icon:invest}<span data-i18n="nav.invest">Invest</span></a>
+
+    <div class="side-label" data-i18n="nav.support">Support</div>
+    <a class="side-link" data-view="support">${icon:support}<span data-i18n="nav.support">Support</span></a>
+    <a class="side-link" data-view="settings">${icon:settings}<span data-i18n="nav.settings">Settings</span></a>
+
+    <div class="sidebar-foot">
+      <a class="side-link" id="logoutBtn">${icon:logout}<span data-i18n="nav.logout">Log out</span></a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="mobile-topbar">
+      <button class="icon-btn" id="menuBtn" aria-label="Menu">${icon:menu}</button>
+      <div class="brand" style="font-size:15px"><span class="brand-mark" style="width:26px;height:26px;font-size:11px">UB</span><span>UBS-PROFPORT</span></div>
+      <div class="row gap-8"><span id="langSlotM"></span><span id="themeSlotM"></span></div>
+    </div>
+
+    <div class="topbar">
+      <div>
+        <h1 id="pageTitle" data-i18n="nav.overview">Overview</h1>
+        <div class="sub" id="pageSub"></div>
+      </div>
+      <div class="topbar-actions">
+        <span id="langSlot"></span>
+        <span id="themeSlot"></span>
+        <div class="row gap-10" style="padding-left:10px;border-left:1px solid var(--line)">
+          <div class="avatar" id="userAvatar">AM</div>
+          <div style="line-height:1.25">
+            <div style="font-size:13px;font-weight:600" id="userName">—</div>
+            <div style="font-size:11px;color:var(--text-3)" id="userAcct">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OVERVIEW -->
+    <section class="view active" id="view-overview">
+      <div class="grid-2" style="margin-bottom:18px">
+        <div class="balance-card">
+          <div class="label" data-i18n="dash.balance">Total balance</div>
+          <div class="amount" id="ovBalance">—</div>
+          <div class="acct" id="ovAcct">—</div>
+          <div class="split">
+            <div><div class="k" data-i18n="dash.income">Income (30d)</div><div class="v" id="ovIncome">—</div></div>
+            <div><div class="k" data-i18n="dash.expense">Expenses (30d)</div><div class="v" id="ovExpense">—</div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="spread" style="margin-bottom:14px">
+            <div class="card-title" data-i18n="dash.rates">Market rates</div>
+            <span class="pill" id="ovRateSrc">—</span>
+          </div>
+          <div class="stack gap-10" id="ovRates"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:18px">
+        <div class="card-title" style="margin-bottom:14px" data-i18n="dash.quick">Quick actions</div>
+        <div class="quick-grid" id="quickGrid"></div>
+      </div>
+
+      <div class="card">
+        <div class="spread" style="margin-bottom:14px">
+          <div class="card-title" data-i18n="dash.recent">Recent activity</div>
+          <button class="btn xs ghost" data-goto="statement" data-i18n="dash.viewall">View all</button>
+        </div>
+        <div class="table-wrap">
+          <table class="tbl"><thead><tr>
+            <th data-i18n="common.date">Date</th><th data-i18n="common.note">Note</th>
+            <th data-i18n="common.status">Status</th><th style="text-align:right" data-i18n="common.amount">Amount</th>
+          </tr></thead><tbody id="ovTx"></tbody></table>
+        </div>
+      </div>
+    </section>
+
+    <!-- CARDS -->
+    <section class="view" id="view-cards">
+      <div class="card flat" style="background:var(--warn-soft);border-color:transparent;margin-bottom:18px;padding:14px 18px">
+        <div class="row gap-10" style="font-size:13px;color:var(--warn)">${icon:info}<span data-i18n="cards.sub">Sample card data — these numbers are not real and cannot be charged.</span></div>
+      </div>
+      <div class="cards-row" id="cardsRow"></div>
+    </section>
+
+    <!-- WIRE -->
+    <section class="view" id="view-wire">
+      <div class="grid-2 even">
+        <div class="card">
+          <div class="card-title" data-i18n="wire.title">Wire transfer</div>
+          <div class="card-sub" data-i18n="wire.sub">Send funds to an external bank account.</div>
+          <hr class="divider">
+          <form id="wireForm" class="form-grid">
+            <div class="field full"><label data-i18n="wire.beneficiary">Beneficiary name</label><input class="input" name="beneficiary" required></div>
+            <div class="field full"><label data-i18n="wire.iban">IBAN / Account number</label><input class="input mono" name="iban" required></div>
+            <div class="field"><label data-i18n="wire.bank">Bank name</label><input class="input" name="bank" required></div>
+            <div class="field"><label data-i18n="wire.swift">SWIFT / BIC</label><input class="input mono" name="swift"></div>
+            <div class="field"><label data-i18n="common.amount">Amount</label><input class="input" name="amount" type="number" min="1" step="0.01" required></div>
+            <div class="field"><label data-i18n="common.note">Note</label><input class="input" name="note"></div>
+            <div class="full"><button class="btn block" type="submit" data-i18n="common.submit">Submit</button></div>
+          </form>
+        </div>
+        <div class="card">
+          <div class="card-title" style="margin-bottom:12px" data-i18n="dash.recent">Recent activity</div>
+          <div class="table-wrap"><table class="tbl"><tbody id="wireTx"></tbody></table></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- INTERNAL -->
+    <section class="view" id="view-internal">
+      <div class="grid-2 even">
+        <div class="card">
+          <div class="card-title" data-i18n="internal.title">Internal transfer</div>
+          <div class="card-sub" data-i18n="internal.sub">Move money between your own accounts instantly.</div>
+          <hr class="divider">
+          <form id="internalForm" class="stack gap-14" style="gap:14px">
+            <div class="field"><label data-i18n="internal.from">From</label>
+              <select class="input" name="from"><option value="checking" data-i18n="internal.checking">Checking account</option><option value="savings" data-i18n="internal.savings">Savings account</option></select>
+            </div>
+            <div class="field"><label data-i18n="internal.to">To</label>
+              <select class="input" name="to"><option value="savings" data-i18n="internal.savings">Savings account</option><option value="checking" data-i18n="internal.checking">Checking account</option></select>
+            </div>
+            <div class="field"><label data-i18n="common.amount">Amount</label><input class="input" name="amount" type="number" min="1" step="0.01" required></div>
+            <button class="btn block" type="submit" data-i18n="common.submit">Submit</button>
+          </form>
+        </div>
+        <div class="card">
+          <div class="card-title" style="margin-bottom:12px" data-i18n="dash.accounts">Your accounts</div>
+          <div class="stack gap-12" id="acctList"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STATEMENT -->
+    <section class="view" id="view-statement">
+      <div class="card">
+        <div class="spread" style="margin-bottom:16px;flex-wrap:wrap">
+          <div>
+            <div class="card-title" data-i18n="stmt.title">Account statement</div>
+            <div class="card-sub" data-i18n="stmt.sub">Download or print a statement for any period.</div>
+          </div>
+          <div class="row gap-8">
+            <button class="btn sm ghost" id="stmtCsv">${icon:download}<span data-i18n="stmt.export">Export CSV</span></button>
+            <button class="btn sm ghost" id="stmtPrint">${icon:print}<span data-i18n="stmt.print">Print</span></button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="tbl"><thead><tr>
+            <th data-i18n="common.date">Date</th><th data-i18n="common.note">Note</th>
+            <th data-i18n="admin.kind">Type</th><th data-i18n="common.status">Status</th>
+            <th style="text-align:right" data-i18n="common.amount">Amount</th>
+          </tr></thead><tbody id="stmtTx"></tbody></table>
+        </div>
+      </div>
+    </section>
+
+    <!-- LOANS -->
+    <section class="view" id="view-loans">
+      <div class="grid-2 even">
+        <div class="card">
+          <div class="card-title" data-i18n="loan.title">Loan request</div>
+          <div class="card-sub" data-i18n="loan.sub">Apply for a demo loan. Applications go to the admin console for review.</div>
+          <hr class="divider">
+          <form id="loanForm" class="stack gap-14" style="gap:14px">
+            <div class="field"><label data-i18n="common.amount">Amount</label><input class="input" name="amount" type="number" min="100" step="100" required></div>
+            <div class="field"><label data-i18n="loan.term">Term (months)</label>
+              <select class="input" name="term"><option>6</option><option>12</option><option selected>24</option><option>36</option><option>60</option></select>
+            </div>
+            <div class="field"><label data-i18n="loan.purpose">Purpose</label><input class="input" name="purpose" required></div>
+            <button class="btn block" type="submit" data-i18n="loan.apply">Submit application</button>
+          </form>
+        </div>
+        <div class="card">
+          <div class="card-title" style="margin-bottom:12px" data-i18n="nav.loans">Loans</div>
+          <div class="table-wrap"><table class="tbl"><tbody id="loanList"></tbody></table></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BILLS -->
+    <section class="view" id="view-bills">
+      <div class="grid-2 even">
+        <div class="card">
+          <div class="card-title" data-i18n="bill.title">Pay a bill</div>
+          <div class="card-sub" data-i18n="bill.sub">Pay a utility or service bill from your balance.</div>
+          <hr class="divider">
+          <form id="billForm" class="stack gap-14" style="gap:14px">
+            <div class="field"><label data-i18n="bill.payee">Payee</label>
+              <select class="input" name="payee"><option>City Power &amp; Light</option><option>Metro Water</option><option>Fiber Internet</option><option>Mobile Telecom</option></select>
+            </div>
+            <div class="field"><label data-i18n="bill.account">Biller account</label><input class="input mono" name="account" required></div>
+            <div class="field"><label data-i18n="common.amount">Amount</label><input class="input" name="amount" type="number" min="1" step="0.01" required></div>
+            <button class="btn block" type="submit" data-i18n="bill.pay">Pay bill</button>
+          </form>
+        </div>
+        <div class="card">
+          <div class="card-title" style="margin-bottom:12px" data-i18n="dash.recent">Recent activity</div>
+          <div class="table-wrap"><table class="tbl"><tbody id="billTx"></tbody></table></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ATM -->
+    <section class="view" id="view-atm">
+      <div class="grid-2 even">
+        <div class="card">
+          <div class="card-title" data-i18n="atm.title">ATM card request</div>
+          <div class="card-sub" data-i18n="atm.sub">Request a physical ATM card. Demo only — nothing is issued.</div>
+          <hr class="divider">
+          <form id="atmForm" class="stack gap-14" style="gap:14px">
+            <div class="field"><label data-i18n="atm.deliver">Delivery address</label><textarea class="input" name="address" required></textarea></div>
+            <button class="btn block" type="submit" data-i18n="atm.request">Request card</button>
+          </form>
+        </div>
+        <div class="card">
+          <div class="card-title" style="margin-bottom:12px" data-i18n="admin.requests">Requests</div>
+          <div class="table-wrap"><table class="tbl"><tbody id="atmList"></tbody></table></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- INVEST -->
+    <section class="view" id="view-invest">
+      <div class="stat-grid" style="margin-bottom:18px">
+        <div class="stat"><div class="k" data-i18n="invest.portfolio">Portfolio value</div><div class="v" id="invValue">—</div><div class="d amt-pos" id="invReturn">—</div></div>
+        <div class="stat"><div class="k" data-i18n="invest.holdings">Holdings</div><div class="v">4</div><div class="d muted">Demo</div></div>
+        <div class="stat"><div class="k" data-i18n="invest.return">Return</div><div class="v amt-pos">+6.4%</div><div class="d muted">YTD</div></div>
+        <div class="stat"><div class="k" data-i18n="common.status">Status</div><div class="v" style="font-size:16px">Demo</div><div class="d muted" data-i18n="hero.badge">Demo data only</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title" style="margin-bottom:12px" data-i18n="invest.holdings">Holdings</div>
+        <div class="table-wrap"><table class="tbl"><thead><tr>
+          <th>Asset</th><th>Allocation</th><th style="text-align:right">Value</th><th style="text-align:right">Return</th>
+        </tr></thead><tbody id="invTable"></tbody></table></div>
+        <p class="dim" style="font-size:12px;margin-top:12px" data-i18n="invest.sub">A demo portfolio view. No real securities are traded.</p>
+      </div>
+    </section>
+
+    <!-- SUPPORT -->
+    <section class="view" id="view-support">
+      <div class="card">
+        <div class="card-title" data-i18n="support.title">Support</div>
+        <div class="card-sub" data-i18n="support.sub">Message the operations team. Replies appear here.</div>
+        <hr class="divider">
+        <div class="thread" id="supportThread"></div>
+        <form id="supportForm" class="row gap-10" style="margin-top:16px">
+          <input class="input" id="supportInput" data-i18n-ph="support.placeholder" placeholder="Write a message…" required>
+          <button class="btn" type="submit" data-i18n="support.send">Send</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="view" id="view-settings">
+      <div class="grid-2 even">
+        <div class="card">
+          <div class="card-title" data-i18n="settings.title">Settings</div>
+          <div class="card-sub" data-i18n="settings.sub">Appearance and preferences.</div>
+          <hr class="divider">
+          <div class="spread" style="padding:10px 0">
+            <div><div style="font-size:13.5px;font-weight:600" data-i18n="settings.theme">Dark mode</div></div>
+            <button class="btn sm ghost" id="themeToggle2">${icon:moon}<span data-i18n="settings.theme">Dark mode</span></button>
+          </div>
+          <div class="spread" style="padding:10px 0;border-top:1px solid var(--line)">
+            <div style="font-size:13.5px;font-weight:600" data-i18n="settings.language">Language</div>
+            <span id="langSlot2"></span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title" data-i18n="settings.reset">Reset demo data</div>
+          <div class="card-sub" data-i18n="settings.resetnote">Clears all demo data in this browser and restores the seed.</div>
+          <hr class="divider">
+          <button class="btn danger" id="resetBtn" data-i18n="settings.reset">Reset demo data</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<nav class="bottom-nav" id="bottomNav" style="display:none">
+  <div class="bn-inner">
+    <button class="bn-item active" data-view="overview">${icon:home}<span data-i18n="nav.home">Home</span></button>
+    <button class="bn-item" data-view="cards">${icon:card}<span data-i18n="nav.cards">Cards</span></button>
+    <button class="bn-item" data-view="wire">${icon:send}<span data-i18n="nav.transfer">Transfer</span></button>
+    <button class="bn-item" data-view="support">${icon:support}<span data-i18n="nav.support">Support</span></button>
+    <button class="bn-item" id="bnLogout">${icon:logout}<span data-i18n="nav.logout">Log out</span></button>
+  </div>
+</nav>
+
+<div id="toasts"></div>
+<script src="assets/core.js?v=3"></script>
+<script>
+(function () {
+  UBS.initChrome();
+
+  /* ---- icon placeholders in markup ---- */
+  document.body.innerHTML = document.body.innerHTML.replace(/\$\{icon:([a-zA-Z]+)\}/g, function (_, n) { return UBS.icon(n); });
+
+  var user = UBS.currentUser();
+  var gate = document.getElementById("loginGate");
+  var root = document.getElementById("appRoot");
+
+  /* ---------- login ---------- */
+  document.getElementById("fillDemo").addEventListener("click", function () {
+    document.getElementById("email").value = "alex@demo.local";
+    document.getElementById("password").value = "demo1234";
+    UBS.toast(UBS.t("toast.filled"));
+  });
+  document.getElementById("loginForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var r = UBS.login(document.getElementById("email").value, document.getElementById("password").value);
+    var err = document.getElementById("loginError");
+    if (!r.ok) {
+      err.classList.remove("hide");
+      err.textContent = UBS.t(r.error === "blocked" ? "login.blocked" : "login.error");
+      return;
+    }
+    user = r.user;
+    showApp();
+  });
+
+  function showApp() {
+    gate.classList.add("hide");
+    root.classList.remove("hide");
+    document.getElementById("bottomNav").style.display = "";
+    boot();
+  }
+
+  if (user) showApp();
+
+  /* ---------- chrome ---------- */
+  function mountChrome() {
+    ["langSlot", "langSlotM", "langSlot2"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.innerHTML = UBS.langSelectHTML();
+    });
+    ["themeSlot", "themeSlotM"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.innerHTML = UBS.themeBtnHTML();
+    });
+    UBS.wireLangSelect();
+    UBS.wireThemeBtn();
+    var t2 = document.getElementById("themeToggle2");
+    if (t2) t2.addEventListener("click", function () { UBS.toggleTheme(); });
+  }
+
+  /* ---------- navigation ---------- */
+  var TITLES = {
+    overview: ["nav.overview", "dash.hello"], cards: ["nav.cards", "cards.sub"],
+    wire: ["wire.title", "wire.sub"], internal: ["internal.title", "internal.sub"],
+    statement: ["stmt.title", "stmt.sub"], loans: ["loan.title", "loan.sub"],
+    bills: ["bill.title", "bill.sub"], atm: ["atm.title", "atm.sub"],
+    invest: ["invest.title", "invest.sub"], support: ["support.title", "support.sub"],
+    settings: ["settings.title", "settings.sub"]
+  };
+
+  function go(view) {
+    document.querySelectorAll(".view").forEach(function (v) { v.classList.remove("active"); });
+    var el = document.getElementById("view-" + view);
+    if (el) el.classList.add("active");
+    document.querySelectorAll(".side-link[data-view]").forEach(function (a) {
+      a.classList.toggle("active", a.getAttribute("data-view") === view);
+    });
+    document.querySelectorAll(".bn-item[data-view]").forEach(function (a) {
+      a.classList.toggle("active", a.getAttribute("data-view") === view);
+    });
+    var tt = TITLES[view] || TITLES.overview;
+    document.getElementById("pageTitle").textContent = UBS.t(tt[0]);
+    document.getElementById("pageSub").textContent = UBS.t(tt[1]);
+    closeSidebar();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (view === "overview") renderOverview();
+    if (view === "cards") renderCards();
+    if (view === "statement") renderStatement();
+    if (view === "loans") renderLoans();
+    if (view === "support") renderSupport();
+    if (view === "internal") renderAccounts();
+    if (view === "invest") renderInvest();
+    if (view === "atm") renderAtm();
+    if (view === "wire") renderMiniTx("wireTx");
+    if (view === "bills") renderMiniTx("billTx");
+  }
+
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest("[data-view]");
+    if (a) { go(a.getAttribute("data-view")); return; }
+    var g = e.target.closest("[data-goto]");
+    if (g) { go(g.getAttribute("data-goto")); }
+  });
+
+  function closeSidebar() {
+    document.getElementById("sidebar").classList.remove("open");
+    var s = document.querySelector(".scrim");
+    if (s) s.remove();
+  }
+  document.getElementById("menuBtn").addEventListener("click", function () {
+    var sb = document.getElementById("sidebar");
+    sb.classList.add("open");
+    var scrim = document.createElement("div");
+    scrim.className = "scrim";
+    scrim.addEventListener("click", closeSidebar);
+    document.body.appendChild(scrim);
+  });
+
+  function doLogout() {
+    UBS.logout();
+    location.reload();
+  }
+  document.getElementById("logoutBtn").addEventListener("click", doLogout);
+  document.getElementById("bnLogout").addEventListener("click", doLogout);
+
+  /* ---------- renderers ---------- */
+  function refreshUser() { user = UBS.currentUser(); }
+
+  function renderHeader() {
+    refreshUser();
+    if (!user) return;
+    document.getElementById("userName").textContent = user.name;
+    document.getElementById("userAcct").textContent = "•••• " + user.accountNumber.slice(-4);
+    document.getElementById("userAvatar").textContent = UBS.initials(user.name);
+  }
+
+  function sum30(list, type) {
+    var cut = Date.now() - 86400000 * 30;
+    return (list || []).filter(function (t) { return t.type === type && t.date >= cut; })
+      .reduce(function (s, t) { return s + t.amount; }, 0);
+  }
+
+  function renderOverview() {
+    refreshUser();
+    if (!user) return;
+    var cur = user.currency;
+    document.getElementById("ovBalance").textContent = UBS.fmtMoney(user.balance, cur);
+    document.getElementById("ovAcct").textContent = "•••• " + user.accountNumber.slice(-4) + " · " + cur;
+    document.getElementById("ovIncome").textContent = UBS.fmtMoney(sum30(user.transactions, "credit"), cur);
+    document.getElementById("ovExpense").textContent = UBS.fmtMoney(sum30(user.transactions, "debit"), cur);
+
+    var rates = UBS.db().rates || UBS.FALLBACK;
+    document.getElementById("ovRateSrc").textContent = rates.source || "fallback";
+    document.getElementById("ovRates").innerHTML = ["EUR", "JPY", "KRW"].map(function (c) {
+      var v = UBS.convert(1, "USD", c, rates);
+      return '<div class="spread" style="font-size:13px"><span class="muted">1 USD</span>' +
+        '<span class="mono" style="font-weight:600">' + UBS.fmtNum(v, c === "JPY" || c === "KRW" ? 2 : 4) + " " + c + "</span></div>";
+    }).join("");
+
+    var QUICK = [
+      ["send", "act.wire", "wire"], ["refresh", "act.internal", "internal"], ["doc", "act.statement", "statement"],
+      ["loan", "act.loan", "loans"], ["bill", "act.bill", "bills"], ["atm", "act.atm", "atm"],
+      ["invest", "act.invest", "invest"], ["card", "nav.cards", "cards"], ["support", "act.support", "support"]
+    ];
+    document.getElementById("quickGrid").innerHTML = QUICK.map(function (q) {
+      return '<button class="quick-item" data-view="' + q[2] + '"><span class="qi">' + UBS.icon(q[0]) + "</span><span>" + UBS.t(q[1]) + "</span></button>";
+    }).join("");
+
+    var tx = (user.transactions || []).slice(0, 6);
+    document.getElementById("ovTx").innerHTML = tx.length ? tx.map(function (t) {
+      return "<tr><td class='muted'>" + UBS.fmtDate(t.date) + "</td><td>" + t.desc + "</td><td>" + UBS.statusPill(t.status) +
+        "</td><td style='text-align:right' class='" + (t.type === "credit" ? "amt-pos" : "amt-neg") + "'>" +
+        (t.type === "credit" ? "+" : "−") + UBS.fmtMoney(t.amount, t.currency || cur) + "</td></tr>";
+    }).join("") : '<tr><td colspan="4" class="empty">—</td></tr>';
+  }
+
+  function renderCards() {
+    refreshUser();
+    var row = document.getElementById("cardsRow");
+    if (!user.cards || !user.cards.length) {
+      row.innerHTML = '<div class="empty">—</div>';
+      return;
+    }
+    row.innerHTML = user.cards.map(function (c) {
+      var frozen = c.status === "frozen";
+      return '<div class="bank-card ' + c.type + '" style="' + (frozen ? "filter:grayscale(.7);opacity:.75;" : "") + '">' +
+        '<span class="sample-tag">' + UBS.t("cards.sample") + "</span>" +
+        '<div class="bc-top"><div><div class="bc-brand">' + c.brand + '</div><div class="bc-type">' + c.type + "</div></div><div class='bc-chip'></div></div>" +
+        '<div><div class="bc-num">' + c.number + "</div>" +
+        '<div class="bc-meta"><div>' + UBS.t("cards.expiry") + "<b>" + c.expiry + "</b></div>" +
+        "<div>" + UBS.t("cards.cvv") + "<b>" + c.cvv + "</b></div>" +
+        "<div>" + UBS.t("common.status") + "<b>" + (frozen ? UBS.t("cards.frozen") : UBS.t("common.active")) + "</b></div></div></div>" +
+        '<div style="margin-top:14px"><button class="btn xs ghost" data-freeze="' + c.id + '" style="background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.25);color:#fff">' +
+        (frozen ? UBS.t("cards.unfreeze") : UBS.t("cards.freeze")) + "</button></div></div>";
+    }).join("");
+  }
+
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-freeze]");
+    if (!b) return;
+    var id = b.getAttribute("data-freeze");
+    var cards = (user.cards || []).map(function (c) {
+      return c.id === id ? Object.assign({}, c, { status: c.status === "frozen" ? "active" : "frozen" }) : c;
+    });
+    UBS.updateUser(user.id, { cards: cards });
+    refreshUser();
+    renderCards();
+    UBS.toast(UBS.t(cards.filter(function (c) { return c.id === id; })[0].status === "frozen" ? "toast.frozen" : "toast.unfrozen"));
+  });
+
+  function renderMiniTx(id) {
+    refreshUser();
+    var tx = (user.transactions || []).slice(0, 8);
+    document.getElementById(id).innerHTML = tx.map(function (t) {
+      return "<tr><td><div style='font-size:13px'>" + t.desc + "</div><div class='dim' style='font-size:11px'>" + UBS.fmtDate(t.date) + "</div></td>" +
+        "<td style='text-align:right' class='" + (t.type === "credit" ? "amt-pos" : "amt-neg") + "'>" +
+        (t.type === "credit" ? "+" : "−") + UBS.fmtMoney(t.amount, t.currency || user.currency) + "</td></tr>";
+    }).join("");
+  }
+
+  function renderAccounts() {
+    refreshUser();
+    var cur = user.currency;
+    document.getElementById("acctList").innerHTML =
+      '<div class="spread" style="padding:14px;border:1px solid var(--line);border-radius:12px"><div><div style="font-size:13px;font-weight:600">' + UBS.t("internal.checking") + '</div><div class="mono dim" style="font-size:11.5px">' + user.accountNumber + '</div></div><div style="font-weight:650">' + UBS.fmtMoney(user.balance, cur) + "</div></div>" +
+      '<div class="spread" style="padding:14px;border:1px solid var(--line);border-radius:12px"><div><div style="font-size:13px;font-weight:600">' + UBS.t("internal.savings") + '</div><div class="mono dim" style="font-size:11.5px">' + user.accountNumber.replace(/\d{4}$/, "9021") + '</div></div><div style="font-weight:650">' + UBS.fmtMoney(12400, cur) + "</div></div>";
+  }
+
+  function renderStatement() {
+    refreshUser();
+    var tx = user.transactions || [];
+    document.getElementById("stmtTx").innerHTML = tx.map(function (t) {
+      return "<tr><td class='muted'>" + UBS.fmtDate(t.date) + "</td><td>" + t.desc + "</td><td>" + (t.type === "credit" ? "Credit" : "Debit") +
+        "</td><td>" + UBS.statusPill(t.status) + "</td><td style='text-align:right' class='" + (t.type === "credit" ? "amt-pos" : "amt-neg") + "'>" +
+        (t.type === "credit" ? "+" : "−") + UBS.fmtMoney(t.amount, t.currency || user.currency) + "</td></tr>";
+    }).join("");
+  }
+
+  document.getElementById("stmtCsv").addEventListener("click", function () {
+    var rows = [["Date", "Description", "Type", "Status", "Amount", "Currency"]];
+    (user.transactions || []).forEach(function (t) {
+      rows.push([new Date(t.date).toISOString().slice(0, 10), t.desc, t.type, t.status, t.amount, t.currency || user.currency]);
+    });
+    UBS.csvDownload("ubs-profport-statement-demo.csv", rows);
+    UBS.toast(UBS.t("toast.saved"));
+  });
+  document.getElementById("stmtPrint").addEventListener("click", function () { window.print(); });
+
+  function renderLoans() {
+    refreshUser();
+    var all = (user.loans || []).concat((user.requests || []).filter(function (r) { return r.kind === "loan"; }));
+    document.getElementById("loanList").innerHTML = all.length ? all.map(function (l) {
+      return "<tr><td><div style='font-weight:600'>" + UBS.fmtMoney(l.amount, user.currency) + "</div><div class='dim' style='font-size:11px'>" + (l.purpose || "") + "</div></td>" +
+        "<td style='text-align:right'>" + UBS.statusPill(l.status) + "</td></tr>";
+    }).join("") : '<tr><td class="empty">—</td></tr>';
+  }
+
+  function renderAtm() {
+    refreshUser();
+    var reqs = (user.requests || []).filter(function (r) { return r.kind === "atm"; });
+    document.getElementById("atmList").innerHTML = reqs.length ? reqs.map(function (r) {
+      return "<tr><td><div style='font-size:13px'>" + (r.note || "ATM card") + "</div><div class='dim' style='font-size:11px'>" + UBS.fmtDate(r.date) + "</div></td>" +
+        "<td style='text-align:right'>" + UBS.statusPill(r.status) + "</td></tr>";
+    }).join("") : '<tr><td class="empty">—</td></tr>';
+  }
+
+  function renderInvest() {
+    refreshUser();
+    var cur = user.currency;
+    var holdings = [
+      { n: "Global Equity Index", a: "45%", v: 11200, r: "+8.2%" },
+      { n: "Government Bonds", a: "30%", v: 7400, r: "+2.1%" },
+      { n: "Technology Fund", a: "18%", v: 4500, r: "+11.6%" },
+      { n: "Cash Reserve", a: "7%", v: 1750, r: "+0.4%" }
+    ];
+    var total = holdings.reduce(function (s, h) { return s + h.v; }, 0);
+    document.getElementById("invValue").textContent = UBS.fmtMoney(total, cur);
+    document.getElementById("invReturn").textContent = "+" + UBS.fmtMoney(total * 0.064, cur) + " (6.4%)";
+    document.getElementById("invTable").innerHTML = holdings.map(function (h) {
+      return "<tr><td>" + h.n + "</td><td class='muted'>" + h.a + "</td><td style='text-align:right'>" + UBS.fmtMoney(h.v, cur) +
+        "</td><td style='text-align:right' class='amt-pos'>" + h.r + "</td></tr>";
+    }).join("");
+  }
+
+  function renderSupport() {
+    refreshUser();
+    var th = document.getElementById("supportThread");
+    var msgs = user.messages || [];
+    th.innerHTML = msgs.length ? msgs.map(function (m) {
+      return '<div class="msg ' + (m.from === "user" ? "user" : "admin") + '">' + escapeHtml(m.text) +
+        '<div class="meta">' + (m.from === "user" ? user.name : "Support") + " · " + UBS.fmtDateTime(m.date) + "</div></div>";
+    }).join("") : '<div class="empty">' + UBS.t("admin.nomessages") + "</div>";
+    th.scrollTop = th.scrollHeight;
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  /* ---------- forms ---------- */
+  function num(v) { return parseFloat(v) || 0; }
+
+  document.getElementById("wireForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var f = e.target;
+    var amt = num(f.amount.value);
+    if (amt > user.balance) { UBS.toast(UBS.t("toast.insufficient"), "error"); return; }
+    UBS.updateUser(user.id, { balance: user.balance - amt });
+    UBS.addTransaction(user.id, { type: "debit", desc: "Wire → " + f.beneficiary.value, amount: amt, currency: user.currency });
+    f.reset();
+    refreshUser();
+    renderMiniTx("wireTx");
+    UBS.toast(UBS.t("toast.sent"));
+  });
+
+  document.getElementById("internalForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var f = e.target;
+    var amt = num(f.amount.value);
+    if (amt > user.balance) { UBS.toast(UBS.t("toast.insufficient"), "error"); return; }
+    UBS.addTransaction(user.id, { type: "debit", desc: "Internal → " + UBS.t("internal." + f.to.value), amount: amt, currency: user.currency });
+    f.reset();
+    refreshUser();
+    renderAccounts();
+    UBS.toast(UBS.t("toast.sent"));
+  });
+
+  document.getElementById("loanForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var f = e.target;
+    UBS.addRequest(user.id, { kind: "loan", amount: num(f.amount.value), note: f.purpose.value + " · " + f.term.value + "m" });
+    f.reset();
+    refreshUser();
+    renderLoans();
+    UBS.toast(UBS.t("toast.submitted"));
+  });
+
+  document.getElementById("billForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var f = e.target;
+    var amt = num(f.amount.value);
+    if (amt > user.balance) { UBS.toast(UBS.t("toast.insufficient"), "error"); return; }
+    UBS.updateUser(user.id, { balance: user.balance - amt });
+    UBS.addTransaction(user.id, { type: "debit", desc: f.payee.value + " · " + f.account.value, amount: amt, currency: user.currency });
+    f.reset();
+    refreshUser();
+    renderMiniTx("billTx");
+    UBS.toast(UBS.t("toast.saved"));
+  });
+
+  document.getElementById("atmForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var f = e.target;
+    UBS.addRequest(user.id, { kind: "atm", amount: 0, note: "ATM card → " + f.address.value.slice(0, 40) });
+    f.reset();
+    refreshUser();
+    renderAtm();
+    UBS.toast(UBS.t("toast.submitted"));
+  });
+
+  document.getElementById("supportForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var inp = document.getElementById("supportInput");
+    var v = inp.value.trim();
+    if (!v) return;
+    UBS.addMessage(user.id, "user", v);
+    inp.value = "";
+    refreshUser();
+    renderSupport();
+    UBS.toast(UBS.t("toast.sent"));
+  });
+
+  document.getElementById("resetBtn").addEventListener("click", function () {
+    UBS.modal({
+      title: UBS.t("settings.reset"),
+      sub: UBS.t("settings.resetnote"),
+      confirmText: UBS.t("settings.reset"),
+      danger: true,
+      onConfirm: function () {
+        UBS.reset();
+        UBS.logout();
+        location.reload();
+      }
+    });
+  });
+
+  /* ---------- boot ---------- */
+  function boot() {
+    mountChrome();
+    renderHeader();
+    renderOverview();
+    renderCards();
+    renderAccounts();
+    renderStatement();
+    renderLoans();
+    renderAtm();
+    renderInvest();
+    renderSupport();
+    renderMiniTx("wireTx");
+    renderMiniTx("billTx");
+    go("overview");
+    UBS.fetchRates().then(function () { renderOverview(); });
+  }
+
+  document.addEventListener("ubs:lang", function () {
+    if (!user) return;
+    var active = document.querySelector(".view.active");
+    var id = active ? active.id.replace("view-", "") : "overview";
+    go(id);
+    renderHeader();
+  });
+  document.addEventListener("ubs:theme", function () {
+    ["themeSlot", "themeSlotM"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.innerHTML = UBS.themeBtnHTML();
+    });
+    UBS.wireThemeBtn();
+  });
+})();
+</script>
+</body>
+</html>
