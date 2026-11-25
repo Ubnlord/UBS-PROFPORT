@@ -138,7 +138,9 @@
 </footer>
 
 <div id="toasts"></div>
-<script src="assets/core.js?v=3"></script>
+<script src="assets/config.js"></script>
+<script src="assets/data.js"></script>
+<script src="assets/core.js?v=4"></script>
 <script>
 (function () {
   UBS.initChrome();
@@ -199,7 +201,7 @@
 
   document.addEventListener("ubs:lang", function () {
     renderFeatures();
-    var r = UBS.db().rates;
+    var r = UBSData.getRates();
     if (r) renderRates(r);
     document.getElementById("refreshRates").innerHTML = UBS.icon("refresh") + " " + UBS.t("rates.updated");
   });
