@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UBS-PROFPORT — Demo Admin Console</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+
+<div class="demo-banner" role="alert">
+  <span class="dot" aria-hidden="true"></span>
+  <span data-i18n="banner">DEMO — not a real bank. No real money, no real cards.</span>
+</div>
+
+<div class="admin-shell">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><span class="brand-mark">UB</span><span>UBS-PROFPORT</span></div>
+    <div style="padding:0 8px 14px"><span class="admin-tag" data-i18n="admin.youradmin">Admin console</span></div>
+
+    <div class="side-label" data-i18n="admin.overview">Overview</div>
+    <a class="side-link active" data-view="overview">${icon:grid}<span data-i18n="admin.overview">Overview</span></a>
+    <a class="side-link" data-view="users">${icon:users}<span data-i18n="admin.users">Users</span></a>
+
+    <div class="side-label" data-i18n="admin.requests">Requests</div>
+    <a class="side-link" data-view="requests">${icon:doc}<span data-i18n="admin.requests">Requests</span><span class="badge" id="reqBadge">0</span></a>
+    <a class="side-link" data-view="loans">${icon:loan}<span data-i18n="admin.loans">Loans</span></a>
+
+    <div class="side-label" data-i18n="admin.inbox">Support inbox</div>
+    <a class="side-link" data-view="inbox">${icon:inbox}<span data-i18n="admin.inbox">Support inbox</span><span class="badge" id="msgBadge">0</span></a>
+
+    <div class="sidebar-foot">
+      <a class="side-link" href="app.html">${icon:home}<span data-i18n="nav.home">Home</span></a>
+      <a class="side-link" href="index.html">${icon:globe}<span data-i18n="nav.home">Home</span></a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="mobile-topbar">
+      <button class="icon-btn" id="menuBtn" aria-label="Menu">${icon:menu}</button>
+      <div class="brand" style="font-size:15px"><span class="brand-mark" style="width:26px;height:26px;font-size:11px">UB</span><span>Admin</span></div>
+      <div class="row gap-8"><span id="langSlotM"></span><span id="themeSlotM"></span></div>
+    </div>
+
+    <div class="topbar">
+      <div>
+        <h1 id="pageTitle" data-i18n="admin.title">Operations console</h1>
+        <div class="sub" id="pageSub" data-i18n="admin.separate">This console is a separate route from the customer app.</div>
+      </div>
+      <div class="topbar-actions">
+        <span id="langSlot"></span>
+        <span id="themeSlot"></span>
+        <button class="btn sm" id="createUserBtn">${icon:plus}<span data-i18n="admin.createuser">Create user</span></button>
+      </div>
+    </div>
+
+    <!-- OVERVIEW -->
+    <section class="view active" id="view-overview">
+      <div class="stat-grid" style="margin-bottom:18px">
+        <div class="stat"><div class="k" data-i18n="admin.totalusers">Total users</div><div class="v" id="stUsers">—</div></div>
+        <div class="stat"><div class="k" data-i18n="admin.totalbal">Total balances</div><div class="v" id="stBal">—</div></div>
+        <div class="stat"><div class="k" data-i18n="admin.pendingreq">Pending requests</div><div class="v" id="stReq">—</div></div>
+        <div class="stat"><div class="k" data-i18n="admin.openmsgs">Open messages</div><div class="v" id="stMsg">—</div></div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title" style="margin-bottom:12px" data-i18n="admin.users">Users</div>
+          <div class="table-wrap"><table class="tbl"><thead><tr>
+            <th data-i18n="admin.user">User</th><th data-i18n="admin.balance">Balance</th><th data-i18n="common.status">Status</th>
+          </tr></thead><tbody id="ovUsers"></tbody></table></div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="margin-bottom:12px" data-i18n="admin.pendingreq">Pending requests</div>
+          <div class="table-wrap"><table class="tbl"><tbody id="ovReq"></tbody></table></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- USERS -->
+    <section class="view" id="view-users">
+      <div class="card">
+        <div class="spread" style="margin-bottom:14px;flex-wrap:wrap">
+          <div class="card-title" data-i18n="admin.users">Users</div>
+          <div class="row gap-8">
+            <input class="input" id="userSearch" data-i18n-ph="common.search" placeholder="Search" style="width:200px;padding:8px 12px">
+            <button class="btn sm" id="createUserBtn2">${icon:plus}<span data-i18n="admin.createuser">Create user</span></button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="tbl"><thead><tr>
+            <th data-i18n="admin.user">User</th><th data-i18n="admin.acct">Account</th>
+            <th data-i18n="admin.balance">Balance</th><th data-i18n="common.status">Status</th>
+            <th data-i18n="common.actions">Actions</th>
+          </tr></thead><tbody id="usersTable"></tbody></table>
+        </div>
+      </div>
+    </section>
+
+    <!-- REQUESTS -->
+    <section class="view" id="view-requests">
+      <div class="card">
+        <div class="spread" style="margin-bottom:14px;flex-wrap:wrap">
+          <div class="card-title" data-i18n="admin.requests">Requests</div>
+          <div class="tabs" style="border:0;margin:0">
+            <button class="tab active" data-reqfilter="all" data-i18n="common.all">All</button>
+            <button class="tab" data-reqfilter="pending" data-i18n="common.pending">Pending</button>
+            <button class="tab" data-reqfilter="approved" data-i18n="common.approved">Approved</button>
+            <button class="tab" data-reqfilter="rejected" data-i18n="common.rejected">Rejected</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="tbl"><thead><tr>
+            <th data-i18n="admin.user">User</th><th data-i18n="admin.kind">Type</th>
+            <th data-i18n="common.amount">Amount</th><th data-i18n="common.date">Date</th>
+            <th data-i18n="common.status">Status</th><th data-i18n="common.actions">Actions</th>
+          </tr></thead><tbody id="reqTable"></tbody></table>
+        </div>
+      </div>
+    </section>
+
+    <!-- LOANS -->
+    <section class="view" id="view-loans">
+      <div class="card">
+        <div class="card-title" style="margin-bottom:14px" data-i18n="admin.loans">Loans</div>
+        <div class="table-wrap">
+          <table class="tbl"><thead><tr>
+            <th data-i18n="admin.user">User</th><th data-i18n="common.amount">Amount</th>
+            <th data-i18n="loan.purpose">Purpose</th><th data-i18n="common.status">Status</th>
+            <th data-i18n="common.actions">Actions</th>
+          </tr></thead><tbody id="loanTable"></tbody></table>
+        </div>
+      </div>
+    </section>
+
+    <!-- INBOX -->
+    <section class="view" id="view-inbox">
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title" style="margin-bottom:12px" data-i18n="admin.inbox">Support inbox</div>
+          <div class="stack gap-8" id="inboxList"></div>
+        </div>
+        <div class="card" id="inboxDetail">
+          <div class="empty">—</div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="toasts"></div>
+<script src="assets/core.js?v=3"></script>
+<script>
+(function () {
+  UBS.initChrome();
+
+  document.body.innerHTML = document.body.innerHTML.replace(/\$\{icon:([a-zA-Z]+)\}/g, function (_, n) { return UBS.icon(n); });
+
+  function mountChrome() {
+    ["langSlot", "langSlotM"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.innerHTML = UBS.langSelectHTML();
+    });
+    ["themeSlot", "themeSlotM"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.innerHTML = UBS.themeBtnHTML();
+    });
+    UBS.wireLangSelect();
+    UBS.wireThemeBtn();
+  }
+
+  var TITLES = {
+    overview: ["admin.title", "admin.separate"], users: ["admin.users", "admin.sub"],
+    requests: ["admin.requests", "admin.sub"], loans: ["admin.loans", "admin.sub"],
+    inbox: ["admin.inbox", "admin.sub"]
+  };
+  var reqFilter = "all";
+  var selectedThread = null;
+
+  function go(view) {
+    document.querySelectorAll(".view").forEach(function (v) { v.classList.remove("active"); });
+    var el = document.getElementById("view-" + view);
+    if (el) el.classList.add("active");
+    document.querySelectorAll(".side-link[data-view]").forEach(function (a) {
+      a.classList.toggle("active", a.getAttribute("data-view") === view);
+    });
+    var tt = TITLES[view] || TITLES.overview;
+    document.getElementById("pageTitle").textContent = UBS.t(tt[0]);
+    document.getElementById("pageSub").textContent = UBS.t(tt[1]);
+    closeSidebar();
+    renderAll();
+  }
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest("[data-view]");
+    if (a) go(a.getAttribute("data-view"));
+  });
+
+  function closeSidebar() {
+    document.getElementById("sidebar").classList.remove("open");
+    var s = document.querySelector(".scrim");
+    if (s) s.remove();
+  }
+  document.getElementById("menuBtn").addEventListener("click", function () {
+    document.getElementById("sidebar").classList.add("open");
+    var scrim = document.createElement("div");
+    scrim.className = "scrim";
+    scrim.addEventListener("click", closeSidebar);
+    document.body.appendChild(scrim);
+  });
+
+  function allRequests() {
+    var out = [];
+    UBS.db().users.forEach(function (u) {
+      (u.requests || []).forEach(function (r) { out.push(Object.assign({ userId: u.id, userName: u.name, currency: u.currency }, r)); });
+    });
+    return out.sort(function (a, b) { return b.date - a.date; });
+  }
+  function allLoans() {
+    var out = [];
+    UBS.db().users.forEach(function (u) {
+      (u.loans || []).forEach(function (l) { out.push(Object.assign({ userId: u.id, userName: u.name, currency: u.currency, isLoan: true }, l)); });
+      (u.requests || []).filter(function (r) { return r.kind === "loan"; }).forEach(function (l) {
+        out.push(Object.assign({ userId: u.id, userName: u.name, currency: u.currency, isLoan: true, isRequest: true }, l));
+      });
+    });
+    return out.sort(function (a, b) { return b.date - a.date; });
+  }
+  function openMessages() {
+    var n = 0;
+    UBS.db().users.forEach(function (u) {
+      var m = u.messages || [];
+      if (m.length && m[m.length - 1].from === "user") n++;
+    });
+    return n;
+  }
+
+  function renderStats() {
+    var d = UBS.db();
+    document.getElementById("stUsers").textContent = d.users.length;
+    var total = d.users.reduce(function (s, u) { return s + UBS.convert(u.balance, u.currency, "USD", d.rates || UBS.FALLBACK); }, 0);
+    document.getElementById("stBal").textContent = UBS.fmtMoney(total, "USD");
+    var pend = allRequests().filter(function (r) { return r.status === "pending"; }).length;
+    document.getElementById("stReq").textContent = pend;
+    document.getElementById("stMsg").textContent = openMessages();
+    document.getElementById("reqBadge").textContent = pend;
+    document.getElementById("msgBadge").textContent = openMessages();
+  }
+
+  function renderOverview() {
+    var d = UBS.db();
+    document.getElementById("ovUsers").innerHTML = d.users.slice(0, 5).map(function (u) {
+      return "<tr><td><div class='user-cell'><div class='avatar'>" + UBS.initials(u.name) + "</div><div><div style='font-weight:600;font-size:13px'>" + u.name + "</div><div class='dim' style='font-size:11px'>" + u.email + "</div></div></div></td>" +
+        "<td>" + UBS.fmtMoney(u.balance, u.currency) + "</td><td>" + UBS.statusPill(u.status) + "</td></tr>";
+    }).join("");
+    var pend = allRequests().filter(function (r) { return r.status === "pending"; }).slice(0, 6);
+    document.getElementById("ovReq").innerHTML = pend.length ? pend.map(function (r) {
+      return "<tr><td><div style='font-size:13px;font-weight:600'>" + r.userName + "</div><div class='dim' style='font-size:11px'>" + UBS.t("admin." + r.kind) + "</div></td>" +
+        "<td style='text-align:right'>" + (r.amount ? UBS.fmtMoney(r.amount, r.currency) : "—") + "</td></tr>";
+    }).join("") : '<tr><td class="empty">' + UBS.t("admin.norequests") + "</td></tr>';
+  }
+
+  function renderUsers() {
+    var q = (document.getElementById("userSearch").value || "").toLowerCase();
+    var users = UBS.db().users.filter(function (u) {
+      return !q || u.name.toLowerCase().indexOf(q) >= 0 || u.email.toLowerCase().indexOf(q) >= 0;
+    });
+    document.getElementById("usersTable").innerHTML = users.map(function (u) {
+      var actions = "";
+      if (u.status === "active") {
+        actions += '<button class="btn xs ghost" data-act="suspend" data-uid="' + u.id + '">' + UBS.t("admin.suspend") + "</button>";
+        actions += '<button class="btn xs ghost" data-act="block" data-uid="' + u.id + '">' + UBS.t("admin.block") + "</button>";
+      } else {
+        actions += '<button class="btn xs ghost" data-act="activate" data-uid="' + u.id + '">' + UBS.t("admin.activate") + "</button>";
+      }
+      actions += '<button class="btn xs ghost" data-act="fund" data-uid="' + u.id + '">' + UBS.t("admin.fund") + "</button>";
+      actions += '<button class="btn xs ghost" data-act="withdraw" data-uid="' + u.id + '">' + UBS.t("admin.withdraw") + "</button>";
+      return "<tr><td><div class='user-cell'><div class='avatar'>" + UBS.initials(u.name) + "</div><div><div style='font-weight:600;font-size:13px'>" + u.name + "</div><div class='dim' style='font-size:11px'>" + u.email + "</div></div></div></td>" +
+        "<td class='mono' style='font-size:12px'>" + u.accountNumber + "</td>" +
+        "<td style='font-weight:600'>" + UBS.fmtMoney(u.balance, u.currency) + "</td>" +
+        "<td>" + UBS.statusPill(u.status) + "</td>" +
+        "<td><div class='row-actions'>" + actions + "</div></td></tr>";
+    }).join("") || '<tr><td colspan="5" class="empty">—</td></tr>';
+  }
+
+  function renderRequests() {
+    var list = allRequests().filter(function (r) { return reqFilter === "all" || r.status === reqFilter; });
+    document.getElementById("reqTable").innerHTML = list.map(function (r) {
+      var actions = r.status === "pending"
+        ? '<button class="btn xs" data-req="approve" data-uid="' + r.userId + '" data-rid="' + r.id + '">' + UBS.t("common.approve") + "</button>" +
+          '<button class="btn xs ghost" data-req="reject" data-uid="' + r.userId + '" data-rid="' + r.id + '">' + UBS.t("common.reject") + "</button>"
+        : '<span class="dim" style="font-size:12px">—</span>';
+      return "<tr><td><div style='font-weight:600;font-size:13px'>" + r.userName + "</div><div class='dim' style='font-size:11px'>" + (r.note || "") + "</div></td>" +
+        "<td>" + UBS.t("admin." + r.kind) + "</td>" +
+        "<td>" + (r.amount ? UBS.fmtMoney(r.amount, r.currency) : "—") + "</td>" +
+        "<td class='muted'>" + UBS.fmtDate(r.date) + "</td>" +
+        "<td>" + UBS.statusPill(r.status) + "</td>" +
+        "<td><div class='row-actions'>" + actions + "</div></td></tr>";
+    }).join("") || '<tr><td colspan="6" class="empty">' + UBS.t("admin.norequests") + "</td></tr>";
+  }
+
+  function renderLoans() {
+    var list = allLoans();
+    document.getElementById("loanTable").innerHTML = list.map(function (l) {
+      var actions = l.status === "pending"
+        ? '<button class="btn xs" data-loan="approve" data-uid="' + l.userId + '" data-lid="' + l.id + '" data-isreq="' + (l.isRequest ? 1 : 0) + '">' + UBS.t("common.approve") + "</button>" +
+          '<button class="btn xs ghost" data-loan="reject" data-uid="' + l.userId + '" data-lid="' + l.id + '" data-isreq="' + (l.isRequest ? 1 : 0) + '">' + UBS.t("common.reject") + "</button>"
+        : '<span class="dim" style="font-size:12px">—</span>';
+      return "<tr><td style='font-weight:600;font-size:13px'>" + l.userName + "</td>" +
+        "<td>" + UBS.fmtMoney(l.amount, l.currency) + "</td>" +
+        "<td class='muted'>" + (l.purpose || l.note || "—") + "</td>" +
+        "<td>" + UBS.statusPill(l.status) + "</td>" +
+        "<td><div class='row-actions'>" + actions + "</div></td></tr>";
+    }).join("") || '<tr><td colspan="5" class="empty">—</td></tr>';
+  }
+
+  function renderInbox() {
+    var users = UBS.db().users.filter(function (u) { return (u.messages || []).length; });
+    document.getElementById("inboxList").innerHTML = users.map(function (u) {
+      var last = u.messages[u.messages.length - 1];
+      var unread = last.from === "user";
+      return '<button class="side-link" data-thread="' + u.id + '" style="width:100%;text-align:left;' + (selectedThread === u.id ? "background:var(--paper-3)" : "") + '">' +
+        '<div class="avatar">' + UBS.initials(u.name) + "</div>" +
+        '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">' + u.name + "</div>" +
+        '<div class="dim" style="font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + escapeHtml(last.text) + "</div></div>" +
+        (unread ? '<span class="badge" style="background:var(--danger);color:#fff;font-size:10px;padding:1px 6px;border-radius:999px">1</span>' : "") +
+        "</button>";
+    }).join("") || '<div class="empty">' + UBS.t("admin.nomessages") + "</div>";
+
+    var detail = document.getElementById("inboxDetail");
+    if (!selectedThread) { detail.innerHTML = '<div class="empty">' + UBS.t("admin.nomessages") + "</div>"; return; }
+    var u = UBS.db().users.filter(function (x) { return x.id === selectedThread; })[0];
+    if (!u) { detail.innerHTML = '<div class="empty">—</div>'; return; }
+    detail.innerHTML =
+      '<div class="spread" style="margin-bottom:12px"><div class="user-cell"><div class="avatar lg">' + UBS.initials(u.name) + "</div>" +
+      "<div><div style='font-weight:650'>" + u.name + "</div><div class='dim' style='font-size:12px'>" + u.email + "</div></div></div>" +
+      UBS.statusPill(u.status) + "</div>" +
+      '<div class="thread" id="adminThread">' + u.messages.map(function (m) {
+        return '<div class="msg ' + (m.from === "user" ? "admin" : "user") + '">' + escapeHtml(m.text) +
+          '<div class="meta">' + (m.from === "user" ? u.name : "You") + " · " + UBS.fmtDateTime(m.date) + "</div></div>";
+      }).join("") + "</div>" +
+      '<form id="replyForm" class="row gap-10" style="margin-top:16px">' +
+      '<input class="input" id="replyInput" data-i18n-ph="support.placeholder" placeholder="Write a message…" required>' +
+      '<button class="btn" type="submit">' + UBS.t("admin.sendreply") + "</button></form>";
+    var th = document.getElementById("adminThread");
+    th.scrollTop = th.scrollHeight;
+    document.getElementById("replyForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var v = document.getElementById("replyInput").value.trim();
+      if (!v) return;
+      UBS.addMessage(u.id, "admin", v);
+      UBS.toast(UBS.t("toast.replied"));
+      renderInbox();
+      renderStats();
+    });
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function renderAll() {
+    renderStats();
+    renderOverview();
+    renderUsers();
+    renderRequests();
+    renderLoans();
+    renderInbox();
+  }
+
+  /* ---------- actions ---------- */
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-act]");
+    if (b) {
+      var uid = b.getAttribute("data-uid");
+      var act = b.getAttribute("data-act");
+      var u = UBS.db().users.filter(function (x) { return x.id === uid; })[0];
+      if (!u) return;
+      if (act === "suspend") { UBS.updateUser(uid, { status: "suspended" }); UBS.toast(UBS.t("toast.updated")); renderAll(); }
+      if (act === "block") { UBS.updateUser(uid, { status: "blocked" }); UBS.toast(UBS.t("toast.updated")); renderAll(); }
+      if (act === "activate") { UBS.updateUser(uid, { status: "active" }); UBS.toast(UBS.t("toast.updated")); renderAll(); }
+      if (act === "fund" || act === "withdraw") {
+        UBS.modal({
+          title: (act === "fund" ? UBS.t("admin.fund") : UBS.t("admin.withdraw")) + " — " + u.name,
+          sub: UBS.t("admin.balance") + ": " + UBS.fmtMoney(u.balance, u.currency),
+          body: '<div class="field"><label>' + UBS.t("common.amount") + " ( " + u.currency + ')</label><input class="input" id="amtInput" type="number" min="0.01" step="0.01" autofocus></div>',
+          confirmText: UBS.t("common.confirm"),
+          onConfirm: function (back) {
+            var amt = parseFloat(back.querySelector("#amtInput").value) || 0;
+            if (amt <= 0) return false;
+            if (act === "withdraw" && amt > u.balance) { UBS.toast(UBS.t("toast.insufficient"), "error"); return false; }
+            var nb = act === "fund" ? u.balance + amt : u.balance - amt;
+            UBS.updateUser(uid, { balance: nb });
+            UBS.addTransaction(uid, { type: act === "fund" ? "credit" : "debit", desc: act === "fund" ? "Admin credit (demo)" : "Admin debit (demo)", amount: amt, currency: u.currency });
+            UBS.toast(UBS.t("toast.updated"));
+            renderAll();
+          }
+        });
+      }
+      return;
+    }
+
+    var rq = e.target.closest("[data-req]");
+    if (rq) {
+      var uid2 = rq.getAttribute("data-uid"), rid = rq.getAttribute("data-rid"), decision = rq.getAttribute("data-req");
+      var d = UBS.db();
+      var u2 = d.users.filter(function (x) { return x.id === uid2; })[0];
+      var req = (u2.requests || []).filter(function (r) { return r.id === rid; })[0];
+      if (!req) return;
+      var newStatus = decision === "approve" ? "approved" : "rejected";
+      var reqs = u2.requests.map(function (r) { return r.id === rid ? Object.assign({}, r, { status: newStatus }) : r; });
+      var patch = { requests: reqs };
+      if (decision === "approve" && req.kind === "deposit") patch.balance = u2.balance + req.amount;
+      if (decision === "approve" && req.kind === "withdrawal") patch.balance = Math.max(0, u2.balance - req.amount);
+      UBS.updateUser(uid2, patch);
+      if (decision === "approve" && req.amount) {
+        UBS.addTransaction(uid2, { type: req.kind === "deposit" ? "credit" : "debit", desc: "Request approved — " + req.kind, amount: req.amount, currency: u2.currency });
+      }
+      UBS.toast(UBS.t("toast.updated"));
+      renderAll();
+      return;
+    }
+
+    var ln = e.target.closest("[data-loan]");
+    if (ln) {
+      var uid3 = ln.getAttribute("data-uid"), lid = ln.getAttribute("data-lid");
+      var isReq = ln.getAttribute("data-isreq") === "1";
+      var decision2 = ln.getAttribute("data-loan");
+      var d3 = UBS.db();
+      var u3 = d3.users.filter(function (x) { return x.id === uid3; })[0];
+      var newStatus2 = decision2 === "approve" ? "approved" : "rejected";
+      if (isReq) {
+        var reqs3 = (u3.requests || []).map(function (r) { return r.id === lid ? Object.assign({}, r, { status: newStatus2 }) : r; });
+        UBS.updateUser(uid3, { requests: reqs3 });
+      } else {
+        var loans3 = (u3.loans || []).map(function (l) { return l.id === lid ? Object.assign({}, l, { status: newStatus2 }) : l; });
+        UBS.updateUser(uid3, { loans: loans3 });
+      }
+      UBS.toast(UBS.t("toast.updated"));
+      renderAll();
+      return;
+    }
+
+    var th = e.target.closest("[data-thread]");
+    if (th) { selectedThread = th.getAttribute("data-thread"); renderInbox(); return; }
+
+    var rf = e.target.closest("[data-reqfilter]");
+    if (rf) {
+      reqFilter = rf.getAttribute("data-reqfilter");
+      document.querySelectorAll("[data-reqfilter]").forEach(function (x) { x.classList.toggle("active", x === rf); });
+      renderRequests();
+    }
+  });
+
+  document.getElementById("userSearch").addEventListener("input", renderUsers);
+
+  function openCreateUser() {
+    UBS.modal({
+      title: UBS.t("admin.newuser"),
+      sub: UBS.t("admin.sub"),
+      body:
+        '<div class="form-grid">' +
+        '<div class="field full"><label>' + UBS.t("admin.name") + '</label><input class="input" id="nuName" required></div>' +
+        '<div class="field full"><label>' + UBS.t("common.email") + '</label><input class="input" id="nuEmail" type="email" required></div>' +
+        '<div class="field"><label>' + UBS.t("admin.opening") + '</label><input class="input" id="nuBal" type="number" min="0" step="0.01" value="0"></div>' +
+        '<div class="field"><label>' + UBS.t("admin.currency") + '</label><select class="input" id="nuCur"><option>USD</option><option>EUR</option><option>JPY</option><option>KRW</option></select></div>' +
+        "</div>",
+      confirmText: UBS.t("admin.createuser"),
+      onConfirm: function (back) {
+        var name = back.querySelector("#nuName").value.trim();
+        var email = back.querySelector("#nuEmail").value.trim();
+        if (!name || !email) return false;
+        var d = UBS.db();
+        if (d.users.some(function (u) { return u.email.toLowerCase() === email.toLowerCase(); })) {
+          UBS.toast("Email already exists", "error"); return false;
+        }
+        var acct = String(Math.floor(1000 + Math.random() * 9000)) + " " + String(Math.floor(1000 + Math.random() * 9000)) + " " + String(Math.floor(1000 + Math.random() * 9000));
+        d.users.push({
+          id: UBS.uid("u"), name: name, email: email, password: "demo1234",
+          accountNumber: acct, balance: parseFloat(back.querySelector("#nuBal").value) || 0,
+          currency: back.querySelector("#nuCur").value, status: "active", createdAt: Date.now(),
+          cards: [{ id: UBS.uid("c"), type: "debit", brand: "UBS-PROFPORT DEBIT", number: "4000 0000 0000 0000", expiry: "12/29", cv: "123", status: "active" }],
+          transactions: [], loans: [], requests: [], messages: []
+        });
+        UBS.save(d);
+        UBS.toast(UBS.t("toast.created"));
+        renderAll();
+      }
+    });
+  }
+  document.getElementById("createUserBtn").addEventListener("click", openCreateUser);
+  document.getElementById("createUserBtn2").addEventListener("click", openCreateUser);
+
+  document.addEventListener("ubs:lang", function () {
+    var active = document.querySelector(".view.active");
+    var id = active ? active.id.replace("view-", "") : "overview";
+    go(id);
+  });
+  document.addEventListener("ubs:theme", function () {
+    ["themeSlot", "themeSlotM"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.innerHTML = UBS.themeBtnHTML();
+    });
+    UBS.wireThemeBtn();
+  });
+
+  mountChrome();
+  renderAll();
+  go("overview");
+})();
+</script>
+</body>
+</html>
