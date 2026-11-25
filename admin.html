@@ -153,7 +153,9 @@
 </div>
 
 <div id="toasts"></div>
-<script src="assets/core.js?v=3"></script>
+<script src="assets/config.js"></script>
+<script src="assets/data.js"></script>
+<script src="assets/core.js?v=4"></script>
 <script>
 (function () {
   UBS.initChrome();
@@ -351,10 +353,11 @@
       e.preventDefault();
       var v = document.getElementById("replyInput").value.trim();
       if (!v) return;
-      UBS.addMessage(u.id, "admin", v);
-      UBS.toast(UBS.t("toast.replied"));
-      renderInbox();
-      renderStats();
+      UBS.addMessage(u.id, "admin", v).then(function () {
+        UBS.toast(UBS.t("toast.replied"));
+        renderInbox();
+        renderStats();
+      });
     });
   }
 
@@ -373,6 +376,69 @@
     renderInbox();
   }
 
+  /* ---------- admin auth gate ---------- */
+  function showGate(msg) {
+    var shell = document.querySelector(".admin-shell");
+    if (shell) shell.style.display = "none";
+    var old = document.getElementById("adminGate");
+    if (old) old.remove();
+    var g = document.createElement("div");
+    g.id = "adminGate";
+    g.className = "wrap-narrow";
+    g.style.padding = "56px 0 80px";
+    g.innerHTML =
+      '<div class="card pad-lg" style="max-width:460px;margin:0 auto">' +
+      '<div class="brand" style="margin-bottom:22px"><span class="brand-mark">UB</span><span>UBS-PROFPORT</span></div>' +
+      '<h1 style="font-size:24px">' + UBS.t("admin.youradmin") + '</h1>' +
+      '<p class="muted" style="font-size:13.5px;margin-top:8px">' + UBS.t("admin.separate") + '</p>' +
+      '<div class="card flat" style="background:var(--paper-3);margin:20px 0;padding:14px 16px">' +
+      '<div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3)">' + UBS.t("login.demo") + '</div>' +
+      '<div class="mono" style="font-size:13px;margin-top:6px">admin@example.com</div>' +
+      '<div class="mono" style="font-size:13px">demo1234</div></div>' +
+      '<form id="adminLoginForm" class="stack" style="gap:14px">' +
+      '<div class="field"><label>' + UBS.t("common.email") + '</label><input class="input" id="aEmail" type="email" required></div>' +
+      '<div class="field"><label>' + UBS.t("common.password") + '</label><input class="input" id="aPass" type="password" required></div>' +
+      '<div id="aErr" class="pill danger' + (msg ? "" : " hide") + '" style="justify-content:center">' + (msg || "") + '</div>' +
+      '<button class="btn block" type="submit">' + UBS.t("common.signin") + '</button></form>' +
+      '<div class="row gap-10" style="margin-top:18px;justify-content:space-between">' +
+      '<a href="index.html" style="font-size:12.5px;color:var(--text-2)">\u2190 ' + UBS.t("nav.home") + '</a>' +
+      '<a href="app.html" style="font-size:12.5px;color:var(--text-2)">' + UBS.t("nav.overview") + '</a></div></div>';
+    document.body.appendChild(g);
+    document.getElementById("adminLoginForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var err = document.getElementById("aErr");
+      err.classList.add("hide");
+      UBS.login(document.getElementById("aEmail").value, document.getElementById("aPass").value).then(function (r) {
+        if (!r.ok) {
+          err.classList.remove("hide");
+          err.textContent = UBS.t(r.error === "blocked" ? "login.blocked" : "login.error");
+          return;
+        }
+        if (!UBS.isAdmin()) {
+          UBS.logout();
+          err.classList.remove("hide");
+          err.textContent = "This account is not an administrator.";
+          return;
+        }
+        g.remove();
+        if (shell) shell.style.display = "";
+        mountChrome();
+        renderAll();
+        go("overview");
+      });
+    });
+  }
+
+  function start() {
+    if (!UBSData.session()) { showGate(); return; }
+    UBS.reload().then(function () {
+      if (!UBS.isAdmin()) { showGate("This account is not an administrator."); return; }
+      mountChrome();
+      renderAll();
+      go("overview");
+    }).catch(function () { showGate(); });
+  }
+
   /* ---------- actions ---------- */
   document.addEventListener("click", function (e) {
     var b = e.target.closest("[data-act]");
@@ -381,9 +447,9 @@
       var act = b.getAttribute("data-act");
       var u = UBS.db().users.filter(function (x) { return x.id === uid; })[0];
       if (!u) return;
-      if (act === "suspend") { UBS.updateUser(uid, { status: "suspended" }); UBS.toast(UBS.t("toast.updated")); renderAll(); }
-      if (act === "block") { UBS.updateUser(uid, { status: "blocked" }); UBS.toast(UBS.t("toast.updated")); renderAll(); }
-      if (act === "activate") { UBS.updateUser(uid, { status: "active" }); UBS.toast(UBS.t("toast.updated")); renderAll(); }
+      if (act === "suspend") { UBS.updateUser(uid, { status: "suspended" }).then(function () { UBS.toast(UBS.t("toast.updated")); renderAll(); }); }
+      if (act === "block") { UBS.updateUser(uid, { status: "blocked" }).then(function () { UBS.toast(UBS.t("toast.updated")); renderAll(); }); }
+      if (act === "activate") { UBS.updateUser(uid, { status: "active" }).then(function () { UBS.toast(UBS.t("toast.updated")); renderAll(); }); }
       if (act === "fund" || act === "withdraw") {
         UBS.modal({
           title: (act === "fund" ? UBS.t("admin.fund") : UBS.t("admin.withdraw")) + " — " + u.name,
@@ -395,10 +461,9 @@
             if (amt <= 0) return false;
             if (act === "withdraw" && amt > u.balance) { UBS.toast(UBS.t("toast.insufficient"), "error"); return false; }
             var nb = act === "fund" ? u.balance + amt : u.balance - amt;
-            UBS.updateUser(uid, { balance: nb });
-            UBS.addTransaction(uid, { type: act === "fund" ? "credit" : "debit", desc: act === "fund" ? "Admin credit (demo)" : "Admin debit (demo)", amount: amt, currency: u.currency });
-            UBS.toast(UBS.t("toast.updated"));
-            renderAll();
+            UBS.updateUser(uid, { balance: nb })
+              .then(function () { return UBS.addTransaction(uid, { type: act === "fund" ? "credit" : "debit", desc: act === "fund" ? "Admin credit (demo)" : "Admin debit (demo)", amount: amt, currency: u.currency }); })
+              .then(function () { UBS.toast(UBS.t("toast.updated")); renderAll(); });
           }
         });
       }
@@ -413,16 +478,17 @@
       var req = (u2.requests || []).filter(function (r) { return r.id === rid; })[0];
       if (!req) return;
       var newStatus = decision === "approve" ? "approved" : "rejected";
-      var reqs = u2.requests.map(function (r) { return r.id === rid ? Object.assign({}, r, { status: newStatus }) : r; });
-      var patch = { requests: reqs };
+      var patch = {};
       if (decision === "approve" && req.kind === "deposit") patch.balance = u2.balance + req.amount;
       if (decision === "approve" && req.kind === "withdrawal") patch.balance = Math.max(0, u2.balance - req.amount);
-      UBS.updateUser(uid2, patch);
-      if (decision === "approve" && req.amount) {
-        UBS.addTransaction(uid2, { type: req.kind === "deposit" ? "credit" : "debit", desc: "Request approved — " + req.kind, amount: req.amount, currency: u2.currency });
-      }
-      UBS.toast(UBS.t("toast.updated"));
-      renderAll();
+      UBSData.updateRequest(rid, newStatus)
+        .then(function () { return Object.keys(patch).length ? UBS.updateUser(uid2, patch) : null; })
+        .then(function () {
+          if (decision === "approve" && req.amount) {
+            return UBS.addTransaction(uid2, { type: req.kind === "deposit" ? "credit" : "debit", desc: "Request approved — " + req.kind, amount: req.amount, currency: u2.currency });
+          }
+        })
+        .then(function () { UBS.toast(UBS.t("toast.updated")); renderAll(); });
       return;
     }
 
@@ -434,15 +500,8 @@
       var d3 = UBS.db();
       var u3 = d3.users.filter(function (x) { return x.id === uid3; })[0];
       var newStatus2 = decision2 === "approve" ? "approved" : "rejected";
-      if (isReq) {
-        var reqs3 = (u3.requests || []).map(function (r) { return r.id === lid ? Object.assign({}, r, { status: newStatus2 }) : r; });
-        UBS.updateUser(uid3, { requests: reqs3 });
-      } else {
-        var loans3 = (u3.loans || []).map(function (l) { return l.id === lid ? Object.assign({}, l, { status: newStatus2 }) : l; });
-        UBS.updateUser(uid3, { loans: loans3 });
-      }
-      UBS.toast(UBS.t("toast.updated"));
-      renderAll();
+      var job = isReq ? UBSData.updateRequest(lid, newStatus2) : UBSData.updateLoan(lid, newStatus2);
+      job.then(function () { UBS.toast(UBS.t("toast.updated")); renderAll(); });
       return;
     }
 
@@ -479,17 +538,16 @@
         if (d.users.some(function (u) { return u.email.toLowerCase() === email.toLowerCase(); })) {
           UBS.toast("Email already exists", "error"); return false;
         }
-        var acct = String(Math.floor(1000 + Math.random() * 9000)) + " " + String(Math.floor(1000 + Math.random() * 9000)) + " " + String(Math.floor(1000 + Math.random() * 9000));
-        d.users.push({
-          id: UBS.uid("u"), name: name, email: email, password: "demo1234",
-          accountNumber: acct, balance: parseFloat(back.querySelector("#nuBal").value) || 0,
-          currency: back.querySelector("#nuCur").value, status: "active", createdAt: Date.now(),
-          cards: [{ id: UBS.uid("c"), type: "debit", brand: "UBS-PROFPORT DEBIT", number: "4000 0000 0000 0000", expiry: "12/29", cvv: "123", status: "active" }],
-          transactions: [], loans: [], requests: [], messages: []
+        UBSData.createProfile({
+          name: name, email: email,
+          balance: parseFloat(back.querySelector("#nuBal").value) || 0,
+          currency: back.querySelector("#nuCur").value
+        }).then(function () {
+          UBS.toast(UBS.t("toast.created"));
+          return UBS.reload();
+        }).then(renderAll).catch(function (err) {
+          UBS.toast((err && err.message) || "Could not create user", "error");
         });
-        UBS.save(d);
-        UBS.toast(UBS.t("toast.created"));
-        renderAll();
       }
     });
   }
@@ -510,8 +568,7 @@
   });
 
   mountChrome();
-  renderAll();
-  go("overview");
+  start();
 })();
 </script>
 </body>
