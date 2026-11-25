@@ -260,7 +260,7 @@
     document.getElementById("ovReq").innerHTML = pend.length ? pend.map(function (r) {
       return "<tr><td><div style='font-size:13px;font-weight:600'>" + r.userName + "</div><div class='dim' style='font-size:11px'>" + UBS.t("admin." + r.kind) + "</div></td>" +
         "<td style='text-align:right'>" + (r.amount ? UBS.fmtMoney(r.amount, r.currency) : "—") + "</td></tr>";
-    }).join("") : '<tr><td class="empty">' + UBS.t("admin.norequests") + "</td></tr>';
+    }).join("") : '<tr><td class="empty">' + UBS.t("admin.norequests") + "</td></tr>";
   }
 
   function renderUsers() {
@@ -388,7 +388,7 @@
         UBS.modal({
           title: (act === "fund" ? UBS.t("admin.fund") : UBS.t("admin.withdraw")) + " — " + u.name,
           sub: UBS.t("admin.balance") + ": " + UBS.fmtMoney(u.balance, u.currency),
-          body: '<div class="field"><label>' + UBS.t("common.amount") + " ( " + u.currency + ')</label><input class="input" id="amtInput" type="number" min="0.01" step="0.01" autofocus></div>',
+          body: '<div class="field"><label>' + UBS.t("common.amount") + " (" + u.currency + ')</label><input class="input" id="amtInput" type="number" min="0.01" step="0.01" autofocus></div>',
           confirmText: UBS.t("common.confirm"),
           onConfirm: function (back) {
             var amt = parseFloat(back.querySelector("#amtInput").value) || 0;
@@ -484,7 +484,7 @@
           id: UBS.uid("u"), name: name, email: email, password: "demo1234",
           accountNumber: acct, balance: parseFloat(back.querySelector("#nuBal").value) || 0,
           currency: back.querySelector("#nuCur").value, status: "active", createdAt: Date.now(),
-          cards: [{ id: UBS.uid("c"), type: "debit", brand: "UBS-PROFPORT DEBIT", number: "4000 0000 0000 0000", expiry: "12/29", cv: "123", status: "active" }],
+          cards: [{ id: UBS.uid("c"), type: "debit", brand: "UBS-PROFPORT DEBIT", number: "4000 0000 0000 0000", expiry: "12/29", cvv: "123", status: "active" }],
           transactions: [], loans: [], requests: [], messages: []
         });
         UBS.save(d);
