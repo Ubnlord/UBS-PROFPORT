@@ -1,93 +1,66 @@
 /* ============================================================
-   UBS-PROFPORT — DEMO Supabase data layer
+   UBS-PROFPORT — DEMO data layer (Supabase REST + Auth)
    ------------------------------------------------------------
-   Plain fetch() against the Supabase REST + Auth APIs.
-   No SDK, no build step. Uses the public anon key only.
+   This is a UI/UX prototype. Every row it reads or writes is
+   demo data. No real money, no real cards, no fee gating.
 
-   This is a UI/UX prototype. All rows are demo data.
-   No real money, no real cards, no fee gating.
+   Exposes window.UBSData. Loaded BEFORE assets/core.js.
    ============================================================ */
 (function (global) {
   "use strict";
 
   var CFG = global.UBS_CONFIG || {};
-  var URL_BASE = (CFG.SUPABASE_URL || "").replace(/\/+$/, "");
+  var BASE = String(CFG.SUPABASE_URL || "").replace(/\/+$/, "");
   var ANON = CFG.SUPABASE_ANON_KEY || "";
+  var SKEY = "ubs_sb_session_v1";
 
-  var SESSION_KEY = "ubs.session";
-  var CACHE = { users: [], rates: null };
+  var cache = { users: [], rates: null, profile: null, isAdmin: false, ready: false };
 
-  /* ---------- session ---------- */
-  function session() {
-    try { return JSON.parse(localStorage.getItem(SESSION_KEY) || "null"); }
-    catch (e) { return null; }
+  /* ---------------- session ---------------- */
+  function readSession() {
+    try { return JSON.parse(localStorage.getItem(SKEY)) || null; } catch (e) { return null; }
   }
-  function setSession(s) {
-    if (s) localStorage.setItem(SESSION_KEY, JSON.stringify(s));
-    else localStorage.removeItem(SESSION_KEY);
+  function writeSession(s) {
+    try {
+      if (s) localStorage.setItem(SKEY, JSON.stringify(s));
+      else localStorage.removeItem(SKEY);
+    } catch (e) {}
+  }
+  function session() { return readSession(); }
+  function accessToken() {
+    var s = readSession();
+    return s && s.access_token ? s.access_token : null;
   }
   function authUserId() {
-    var s = session();
+    var s = readSession();
     return s && s.user && s.user.id ? s.user.id : null;
-  }
-  function accessToken() {
-    var s = session();
-    return s && s.access_token ? s.access_token : ANON;
   }
 
   function authHeaders(extra) {
-    return Object.assign({
-      "apikey": ANON,
-      "Authorization": "Bearer " + accessToken(),
-      "Content-Type": "application/json"
-    }, extra || {});
+    var h = { apikey: ANON, "Content-Type": "application/json" };
+    var tok = accessToken();
+    if (tok) h.Authorization = "Bearer " + tok;
+    if (extra) Object.keys(extra).forEach(function (k) { h[k] = extra[k]; });
+    return h;
   }
 
-  /* ---------- auth ---------- */
-  function signIn(email, password) {
-    return fetch(URL_BASE + "/auth/v1/token?grant_type=password", {
-      method: "POST",
-      headers: { "apikey": ANON, "Content-Type": "application/json" },
-      body: JSON.stringify({ email: email, password: password })
-    }).then(function (res) {
-      return res.json().then(function (json) {
-        if (!res.ok) {
-          var err = new Error(json.error_description || json.msg || "Sign-in failed");
-          err.code = json.error_code || json.error || "invalid_credentials";
-          throw err;
-        }
-        setSession(json);
-        return json;
-      });
-    });
-  }
-
-  function signOut() {
-    var s = session();
-    setSession(null);
-    CACHE = { users: [], rates: null };
-    if (!s || !s.access_token) return Promise.resolve();
-    return fetch(URL_BASE + "/auth/v1/logout", {
-      method: "POST",
-      headers: { "apikey": ANON, "Authorization": "Bearer " + s.access_token }
-    }).catch(function () { /* local sign-out already done */ });
-  }
-
-  /* ---------- REST helpers ---------- */
   function rest(path, opts) {
     opts = opts || {};
-    return fetch(URL_BASE + "/rest/v1/" + path, {
+    return fetch(BASE + "/rest/v1/" + path, {
       method: opts.method || "GET",
       headers: authHeaders(opts.headers),
-      body: opts.body ? JSON.stringify(opts.body) : undefined
+      body: opts.body ? JSON.stringify(opts.body) : undefined,
+      cache: "no-store"
     }).then(function (res) {
       if (res.status === 204) return null;
-      return res.text().then(function (t) {
-        var data = t ? JSON.parse(t) : null;
+      return res.text().then(function (txt) {
+        var data = null;
+        try { data = txt ? JSON.parse(txt) : null; } catch (e) { data = txt; }
         if (!res.ok) {
-          var err = new Error((data && (data.message || data.hint)) || ("HTTP " + res.status));
+          var msg = (data && (data.message || data.error_description || data.msg)) || ("HTTP " + res.status);
+          var err = new Error(msg);
           err.status = res.status;
-          err.detail = data;
+          err.data = data;
           throw err;
         }
         return data;
@@ -95,201 +68,305 @@
     });
   }
 
-  /* ---------- load everything the UI needs ---------- */
+  /* ---------------- auth ---------------- */
+  function signIn(email, password) {
+    return fetch(BASE + "/auth/v1/token?grant_type=password", {
+      method: "POST",
+      headers: { apikey: ANON, "Content-Type": "application/json" },
+      body: JSON.stringify({ email: String(email).trim(), password: password })
+    }).then(function (res) {
+      return res.json().then(function (data) {
+        if (!res.ok) {
+          var err = new Error(data.error_description || data.msg || "Sign-in failed");
+          err.code = data.error_code || data.error || "invalid";
+          throw err;
+        }
+        writeSession({
+          access_token: data.access_token,
+          refresh_token: data.refresh_token,
+          expires_at: Date.now() + (data.expires_in || 3600) * 1000,
+          user: data.user
+        });
+        return data.user;
+      });
+    });
+  }
+
+  function refresh() {
+    var s = readSession();
+    if (!s || !s.refresh_token) return Promise.reject(new Error("no session"));
+    return fetch(BASE + "/auth/v1/token?grant_type=refresh_token", {
+      method: "POST",
+      headers: { apikey: ANON, "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: s.refresh_token })
+    }).then(function (res) {
+      return res.json().then(function (data) {
+        if (!res.ok) { writeSession(null); throw new Error("session expired"); }
+        writeSession({
+          access_token: data.access_token,
+          refresh_token: data.refresh_token,
+          expires_at: Date.now() + (data.expires_in || 3600) * 1000,
+          user: data.user
+        });
+        return data.user;
+      });
+    });
+  }
+
+  function signOut() {
+    var tok = accessToken();
+    writeSession(null);
+    cache = { users: [], rates: null, profile: null, isAdmin: false, ready: false };
+    if (!tok) return Promise.resolve();
+    return fetch(BASE + "/auth/v1/logout", {
+      method: "POST",
+      headers: { apikey: ANON, Authorization: "Bearer " + tok }
+    }).catch(function () {}).then(function () {});
+  }
+
+  /* ---------------- load ---------------- */
+  function q(table, params) {
+    var qs = params ? "?" + params : "";
+    return rest(table + qs);
+  }
+
   function loadAll() {
     var uid = authUserId();
-    if (!uid) return Promise.resolve(CACHE);
+    if (!uid) return Promise.reject(new Error("not signed in"));
 
-    return Promise.all([
-      rest("profiles?select=*"),
-      rest("accounts?select=*"),
-      rest("cards?select=*"),
-      rest("transactions?select=*&order=created_at.desc"),
-      rest("loans?select=*&order=created_at.desc"),
-      rest("requests?select=*&order=created_at.desc"),
-      rest("support_messages?select=*&order=created_at.asc")
-    ]).then(function (r) {
+    var s = readSession();
+    var stale = s && s.expires_at && Date.now() > s.expires_at - 60000;
+    var pre = stale ? refresh().catch(function () {}) : Promise.resolve();
+
+    return pre.then(function () {
+      return Promise.all([
+        q("profiles", "select=*&order=created_at.asc"),
+        q("accounts", "select=*"),
+        q("cards", "select=*"),
+        q("transactions", "select=*&order=created_at.desc"),
+        q("loans", "select=*&order=created_at.desc"),
+        q("requests", "select=*&order=created_at.desc"),
+        q("support_messages", "select=*&order=created_at.asc")
+      ]);
+    }).then(function (r) {
       var profiles = r[0] || [], accounts = r[1] || [], cards = r[2] || [];
       var txs = r[3] || [], loans = r[4] || [], reqs = r[5] || [], msgs = r[6] || [];
 
-      var users = profiles.map(function (p) {
-        var acct = accounts.filter(function (a) { return a.profile_id === p.id; })[0] || {};
-        return {
-          id: p.id,
-          auth_user_id: p.auth_user_id,
-          name: p.full_name,
-          email: p.email,
-          role: p.role,
-          status: p.status,
-          accountNumber: acct.account_number || "—",
-          balance: acct.balance != null ? Number(acct.balance) : 0,
-          currency: acct.currency || "USD",
-          createdAt: p.created_at ? Date.parse(p.created_at) : Date.now(),
-          cards: cards.filter(function (c) { return c.profile_id === p.id; }).map(function (c) {
-            return { id: c.id, type: c.card_type, brand: c.brand, number: c.card_number, expiry: c.expiry, cvv: c.cvv, status: c.status };
-          }),
-          transactions: txs.filter(function (t) { return t.profile_id === p.id; }).map(function (t) {
-            return {
-              id: t.id, type: t.type, desc: t.description,
-              amount: Number(t.amount), currency: t.currency,
-              status: t.status, date: t.created_at ? Date.parse(t.created_at) : Date.now()
-            };
-          }),
-          loans: loans.filter(function (l) { return l.profile_id === p.id; }).map(function (l) {
-            return {
-              id: l.id, amount: Number(l.amount), purpose: l.purpose,
-              term: l.term_months, status: l.status,
-              date: l.created_at ? Date.parse(l.created_at) : Date.now()
-            };
-          }),
-          requests: reqs.filter(function (q) { return q.profile_id === p.id; }).map(function (q) {
-            return {
-              id: q.id, kind: q.kind, amount: Number(q.amount || 0),
-              note: q.note, status: q.status,
-              date: q.created_at ? Date.parse(q.created_at) : Date.now()
-            };
-          }),
-          messages: msgs.filter(function (m) { return m.profile_id === p.id; }).map(function (m) {
-            return {
-              id: m.id, from: m.sender, text: m.body,
-              date: m.created_at ? Date.parse(m.created_at) : Date.now()
-            };
-          })
-        };
-      });
-
-      CACHE.users = users;
-      return CACHE;
+      var me = profiles.filter(function (p) { return p.auth_user_id === uid; })[0] || null;
+      cache.profile = me;
+      cache.isAdmin = !!(me && me.role === "admin");
+      cache.users = assemble(profiles, accounts, cards, txs, loans, reqs, msgs);
+      cache.ready = true;
+      return cache;
     });
   }
 
-  /* ---------- mutations ---------- */
+  function assemble(profiles, accounts, cards, txs, loans, reqs, msgs) {
+    return profiles.map(function (p) {
+      var accs = accounts.filter(function (a) { return a.profile_id === p.id; });
+      var checking = accs.filter(function (a) { return a.account_type === "checking"; })[0] || accs[0] || null;
+      var accIds = accs.map(function (a) { return a.id; });
+      return {
+        id: p.id,
+        auth_user_id: p.auth_user_id,
+        name: p.full_name,
+        email: p.email,
+        role: p.role,
+        status: p.status,
+        accountNumber: checking ? checking.account_number : "\u2014",
+        balance: checking ? Number(checking.balance) : 0,
+        currency: checking ? checking.currency : "USD",
+        accounts: accs.map(function (a) {
+          return { id: a.id, type: a.account_type, number: a.account_number, currency: a.currency, balance: Number(a.balance) };
+        }),
+        cards: cards.filter(function (c) { return c.profile_id === p.id; }).map(function (c) {
+          return { id: c.id, type: c.card_type, brand: c.brand, number: c.card_number, expiry: c.expiry, cvv: c.cvv, status: c.status };
+        }),
+        transactions: txs.filter(function (t) { return accIds.indexOf(t.account_id) >= 0; }).map(function (t) {
+          return {
+            id: t.id, type: t.direction, desc: t.description, amount: Number(t.amount),
+            currency: t.currency, date: new Date(t.created_at).getTime(), status: t.status
+          };
+        }).sort(function (a, b) { return b.date - a.date; }),
+        loans: loans.filter(function (l) { return l.profile_id === p.id; }).map(function (l) {
+          return {
+            id: l.id, amount: Number(l.amount), term: l.term_months, purpose: l.purpose,
+            status: l.status, date: new Date(l.created_at).getTime()
+          };
+        }),
+        requests: reqs.filter(function (r) { return r.profile_id === p.id; }).map(function (r) {
+          return {
+            id: r.id, kind: r.kind, amount: Number(r.amount), note: r.note,
+            status: r.status, date: new Date(r.created_at).getTime()
+          };
+        }),
+        messages: msgs.filter(function (m) { return m.profile_id === p.id; }).map(function (m) {
+          return { id: m.id, from: m.sender, text: m.body, date: new Date(m.created_at).getTime() };
+        }).sort(function (a, b) { return a.date - b.date; })
+      };
+    });
+  }
+
+  /* ---------------- mutations ---------------- */
+  function checkingAccountId(profileId) {
+    var u = cache.users.filter(function (x) { return x.id === profileId; })[0];
+    if (!u) return null;
+    var c = (u.accounts || []).filter(function (a) { return a.type === "checking"; })[0];
+    return c ? c.id : (u.accounts && u.accounts[0] ? u.accounts[0].id : null);
+  }
+
   function updateProfile(id, patch) {
     var body = {};
-    if (patch.name != null) body.full_name = patch.name;
     if (patch.status != null) body.status = patch.status;
+    if (patch.name != null) body.full_name = patch.name;
     if (patch.role != null) body.role = patch.role;
-    if (!Object.keys(body).length) return Promise.resolve();
-    return rest("profiles?id=eq." + encodeURIComponent(id), { method: "PATCH", body: body });
+    return rest("profiles?id=eq." + encodeURIComponent(id), {
+      method: "PATCH", body: body, headers: { Prefer: "return=minimal" }
+    });
   }
 
   function setBalance(profileId, balance) {
-    return rest("accounts?profile_id=eq." + encodeURIComponent(profileId), {
-      method: "PATCH", body: { balance: balance }
+    var accId = checkingAccountId(profileId);
+    if (!accId) return Promise.reject(new Error("no account"));
+    return rest("accounts?id=eq." + encodeURIComponent(accId), {
+      method: "PATCH", body: { balance: Number(balance) }, headers: { Prefer: "return=minimal" }
     });
   }
 
-  function updateCard(cardId, patch) {
-    return rest("cards?id=eq." + encodeURIComponent(cardId), { method: "PATCH", body: patch });
-  }
-
   function addTransaction(profileId, tx) {
+    var accId = checkingAccountId(profileId);
+    if (!accId) return Promise.reject(new Error("no account"));
     return rest("transactions", {
       method: "POST",
-      headers: { "Prefer": "return=representation" },
       body: {
-        profile_id: profileId,
-        type: tx.type,
-        description: tx.desc,
-        amount: tx.amount,
+        account_id: accId,
+        direction: tx.type === "credit" ? "credit" : "debit",
+        description: tx.desc || "Transaction",
+        amount: Math.abs(Number(tx.amount) || 0),
         currency: tx.currency || "USD",
         status: tx.status || "completed"
-      }
+      },
+      headers: { Prefer: "return=minimal" }
     });
   }
 
   function addRequest(profileId, req) {
     return rest("requests", {
       method: "POST",
-      headers: { "Prefer": "return=representation" },
       body: {
         profile_id: profileId,
         kind: req.kind,
-        amount: req.amount || 0,
-        note: req.note || "",
+        amount: Number(req.amount) || 0,
+        note: req.note || null,
         status: "pending"
-      }
+      },
+      headers: { Prefer: "return=minimal" }
     });
-  }
-
-  function updateRequest(id, status) {
-    return rest("requests?id=eq." + encodeURIComponent(id), { method: "PATCH", body: { status: status } });
-  }
-
-  function updateLoan(id, status) {
-    return rest("loans?id=eq." + encodeURIComponent(id), { method: "PATCH", body: { status: status } });
   }
 
   function addMessage(profileId, from, text) {
     return rest("support_messages", {
       method: "POST",
-      headers: { "Prefer": "return=representation" },
-      body: { profile_id: profileId, sender: from, body: text }
+      body: { profile_id: profileId, sender: from === "admin" ? "admin" : "user", body: text },
+      headers: { Prefer: "return=minimal" }
+    });
+  }
+
+  function updateCard(id, patch) {
+    var body = {};
+    if (patch.status != null) body.status = patch.status;
+    return rest("cards?id=eq." + encodeURIComponent(id), {
+      method: "PATCH", body: body, headers: { Prefer: "return=minimal" }
+    });
+  }
+
+  function updateRequest(id, status) {
+    return rest("requests?id=eq." + encodeURIComponent(id), {
+      method: "PATCH", body: { status: status }, headers: { Prefer: "return=minimal" }
+    });
+  }
+
+  function updateLoan(id, status) {
+    return rest("loans?id=eq." + encodeURIComponent(id), {
+      method: "PATCH", body: { status: status }, headers: { Prefer: "return=minimal" }
     });
   }
 
   function createProfile(opts) {
     var acct = String(Math.floor(1000 + Math.random() * 9000)) + " " +
-               String(Math.floor(1000 + Math.random() * 9000)) + " " +
-               String(Math.floor(1000 + Math.random() * 9000));
+      String(Math.floor(1000 + Math.random() * 9000)) + " " +
+      String(Math.floor(1000 + Math.random() * 9000));
     return rest("profiles", {
       method: "POST",
-      headers: { "Prefer": "return=representation" },
-      body: { full_name: opts.name, email: opts.email, role: "customer", status: "active" }
+      body: { full_name: opts.name, email: opts.email, role: "customer", status: "active" },
+      headers: { Prefer: "return=representation" }
     }).then(function (rows) {
       var p = rows && rows[0];
-      if (!p) throw new Error("Profile was not created");
+      if (!p) throw new Error("profile not created");
       return rest("accounts", {
         method: "POST",
-        headers: { "Prefer": "return=representation" },
         body: {
-          profile_id: p.id, account_number: acct,
-          balance: opts.balance || 0, currency: opts.currency || "USD"
-        }
+          profile_id: p.id, account_number: acct, account_type: "checking",
+          currency: opts.currency || "USD", balance: Number(opts.balance) || 0
+        },
+        headers: { Prefer: "return=minimal" }
       }).then(function () {
         return rest("cards", {
           method: "POST",
           body: {
             profile_id: p.id, card_type: "debit", brand: "UBS-PROFPORT DEBIT",
             card_number: "4000 0000 0000 0000", expiry: "12/29", cvv: "123", status: "active"
-          }
+          },
+          headers: { Prefer: "return=minimal" }
         });
       }).then(function () { return p; });
     });
   }
 
-  /* ---------- FX cache ---------- */
-  function getRates() { return CACHE.rates; }
-  function setRates(r) { CACHE.rates = r; }
+  /* ---------------- fx ---------------- */
+  function getRates() { return cache.rates; }
+  function setRates(r) { cache.rates = r; return r; }
 
   function loadFxCache() {
-    return rest("fx_rates?select=*&order=fetched_at.desc&limit=1").then(function (rows) {
+    return q("fx_rates", "select=*&limit=1").then(function (rows) {
       var r = rows && rows[0];
       if (!r) return null;
       return {
         USD: 1, EUR: Number(r.eur), JPY: Number(r.jpy), KRW: Number(r.krw),
-        base: "USD", source: r.source || "supabase",
-        fetchedAt: r.fetched_at ? Date.parse(r.fetched_at) : Date.now()
+        base: "USD", source: "supabase cache", fetchedAt: new Date(r.fetched_at).getTime()
       };
     }).catch(function () { return null; });
   }
 
-  function isAdmin() {
-    var uid = authUserId();
-    if (!uid) return false;
-    var me = CACHE.users.filter(function (u) { return u.auth_user_id === uid; })[0];
-    return !!(me && me.role === "admin");
-  }
-
+  /* ---------------- public ---------------- */
   global.UBSData = {
-    session: session, authUserId: authUserId,
-    signIn: signIn, signOut: signOut,
-    loadAll: loadAll, cache: function () { return CACHE; },
-    updateProfile: updateProfile, setBalance: setBalance, updateCard: updateCard,
-    addTransaction: addTransaction, addRequest: addRequest,
-    updateRequest: updateRequest, updateLoan: updateLoan,
-    addMessage: addMessage, createProfile: createProfile,
-    getRates: getRates, setRates: setRates, loadFxCache: loadFxCache,
-    isAdmin: isAdmin
+    configured: !!(BASE && ANON),
+    session: session,
+    authUserId: authUserId,
+    signIn: signIn,
+    signOut: signOut,
+    refresh: refresh,
+    loadAll: loadAll,
+    cache: function () { return cache; },
+    currentUser: function () {
+      var uid = authUserId();
+      if (!uid) return null;
+      return cache.users.filter(function (u) { return u.auth_user_id === uid; })[0] ||
+        cache.users.filter(function (u) { return u.id === (cache.profile && cache.profile.id); })[0] || null;
+    },
+    me: function () { return cache.profile; },
+    isAdmin: function () { return cache.isAdmin; },
+    updateProfile: updateProfile,
+    setBalance: setBalance,
+    addTransaction: addTransaction,
+    addRequest: addRequest,
+    addMessage: addMessage,
+    updateCard: updateCard,
+    updateRequest: updateRequest,
+    updateLoan: updateLoan,
+    createProfile: createProfile,
+    getRates: getRates,
+    setRates: setRates,
+    loadFxCache: loadFxCache
   };
 })(window);
