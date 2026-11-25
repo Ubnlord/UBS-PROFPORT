@@ -19,10 +19,17 @@ HTML/CSS/JS with no build step.
 
 ## Demo login
 
-- Email: `alex@demo.local`
-- Password: `demo1234`
+All demo accounts use the password `demo1234`.
 
-The admin console needs no login — it is a demo operations view.
+| Email | Role |
+|---|---|
+| `alex.morgan@example.com` | Customer |
+| `priya.raman@example.com` | Customer |
+| `tomas.silva@example.com` | Customer (suspended) |
+| `admin@example.com` | **Admin console** |
+
+Sign-in is real Supabase Auth. The admin console (`/admin.html`) only opens for
+a profile whose `role` is `admin` — a customer session is rejected there.
 
 ## Features
 
@@ -34,6 +41,7 @@ The admin console needs no login — it is a demo operations view.
 - Support thread (messages reach the admin inbox)
 - Mobile bottom navigation, side menu, dark mode
 - Built-in translator: English, Spanish, Italian, Portuguese, Dutch, French, Japanese, Korean
+- All data read from and written to Supabase
 
 **Admin console**
 - Block / suspend / activate users
@@ -65,13 +73,23 @@ python3 -m http.server 8080
 
 Project: `https://zincdoarinlonbpxiipt.supabase.co`
 
-1. Open **SQL Editor → New query**
-2. Paste all of `supabase-schema.sql`
-3. Run
+The app reads and writes the Supabase tables directly from the browser through
+`assets/data.js` (plain `fetch` against the REST and Auth APIs — no SDK, no build
+step). Tables used: `profiles`, `accounts`, `cards`, `transactions`, `loans`,
+`requests`, `support_messages`, `fx_rates`.
 
-Then copy `assets/config.js.example` values into `assets/config.js` (or edit it
-directly) with your **anon public** key. Never put the `service_role` key in the
-browser.
+1. Open **SQL Editor → New query**
+2. Paste all of `supabase-schema.sql` and run it
+3. Paste all of `supabase-auth-rls.sql` and run it
+   (adds `is_admin()` / `my_profile_id()`, per-user Row Level Security, and links
+   the seed profiles to the demo auth users)
+4. Create the four demo users in **Authentication → Users** (or the Auth admin
+   API) with the addresses above and password `demo1234`, then re-run the four
+   `update public.profiles ... from auth.users` statements at the end of
+   `supabase-auth-rls.sql`
+
+Then put your **anon public** key in `assets/config.js`. Never put the
+`service_role` key in the browser.
 
 ## Deploy
 
@@ -98,12 +116,14 @@ ubs-profport/
 ├── admin.html
 ├── setup.html
 ├── supabase-schema.sql
+├── supabase-auth-rls.sql
 ├── assets/
 │   ├── app.css
-│   ├── core.js
-│   └── config.js
+│   ├── config.js
+│   ├── data.js      ← Supabase REST + Auth layer
+│   └── core.js
 └── images/
-    └── hero.png
+    └── hero.jpg
 ```
 
 ## License
