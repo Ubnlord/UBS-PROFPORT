@@ -75,13 +75,16 @@ ubs-profport/<br>
 ├── admin.html            ← admin console (separate route)<br>
 ├── setup.html            ← this guide<br>
 ├── supabase-schema.sql   ← schema + seed for Supabase<br>
+├── supabase-auth-rls.sql ← auth link + Row Level Security<br>
 ├── assets/<br>
 │   ├── app.css           ← design system (light + dark)<br>
-│   └── core.js           ← store, i18n (8 langs), FX, UI helpers<br>
+│   ├── config.js         ← Supabase URL + anon key<br>
+│   ├── data.js           ← Supabase REST + Auth layer<br>
+│   └── core.js           ← i18n (8 langs), FX, UI helpers<br>
 └── images/<br>
-&nbsp;&nbsp;&nbsp;&nbsp;└── hero.png          ← hero visual
+&nbsp;&nbsp;&nbsp;&nbsp;└── hero.jpg          ← hero visual
     </div>
-    <p>Everything is static HTML/CSS/JS — no build step, no framework, no bundler. The demo state lives in the browser's <code>localStorage</code>.</p>
+    <p>Everything is static HTML/CSS/JS — no build step, no framework, no bundler. Data and sign-in go straight to Supabase from the browser using the public anon key.</p>
 
     <h2 id="local">2. Run it locally</h2>
     <p>Any static server works. From the project folder:</p>
@@ -90,10 +93,10 @@ python3 -m http.server 8080
 
 # or Node
 npx serve .</code></pre>
-    <p>Then open <code>http://localhost:8080</code>. Sign in with the demo account:</p>
+    <p>Then open <code>http://localhost:8080</code>. Sign in with a demo account (password <code>demo1234</code>):</p>
     <ul>
-      <li>Email: <code>alex@demo.local</code></li>
-      <li>Password: <code>demo1234</code></li>
+      <li>Customer: <code>alex.morgan@example.com</code></li>
+      <li>Admin: <code>admin@example.com</code></li>
     </ul>
     <p>The admin console is at <code>/admin.html</code> — a completely separate route from the customer app.</p>
 
@@ -121,22 +124,24 @@ window.UBS_CONFIG = {
 };</code></pre>
     <p>Then load it in each HTML page, just before <code>core.js</code>:</p>
     <pre><code>&lt;script src="assets/config.js"&gt;&lt;/script&gt;
-&lt;script src="assets/core.js?v=2"&gt;&lt;/script&gt;</code></pre>
+&lt;script src="assets/data.js"&gt;&lt;/script&gt;
+&lt;script src="assets/core.js?v=4"&gt;&lt;/script&gt;</code></pre>
 
     <div class="callout">
       <p><b>Never</b> put the <code>service_role</code> key in the browser. It bypasses Row Level Security. Keep it server-side only (an Edge Function or your own backend).</p>
     </div>
 
-    <h3>Optional: read live data from Supabase</h3>
-    <p>The prototype ships with a localStorage store so it works with zero setup. To read the seeded rows instead, add the Supabase JS client and swap the store:</p>
-    <pre><code>&lt;script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"&gt;&lt;/script&gt;
-&lt;script&gt;
-  const sb = supabase.createClient(
-    UBS_CONFIG.SUPABASE_URL,
-    UBS_CONFIG.SUPABASE_ANON_KEY
-  );
-  // e.g. const { data } = await sb.from('admin_user_overview').select('*');
-&lt;/script&gt;</code></pre>
+    <h3>Live data + real auth (already wired)</h3>
+    <p>The app reads and writes the Supabase tables through <code>assets/data.js</code> (plain <code>fetch</code> against the REST and Auth APIs — no SDK needed). Sign-in uses real Supabase Auth, and the admin console only opens for a profile whose <code>role</code> is <code>admin</code>.</p>
+    <p>After running <code>supabase-schema.sql</code>, also run <code>supabase-auth-rls.sql</code>. It adds the <code>is_admin()</code> / <code>my_profile_id()</code> helpers, replaces the wide-open demo read policies with per-user Row Level Security, and links the seed profiles to the demo auth users.</p>
+    <p>Demo accounts (password <code>demo1234</code> for all):</p>
+    <ul>
+      <li><code>alex.morgan@example.com</code> — customer</li>
+      <li><code>priya.raman@example.com</code> — customer</li>
+      <li><code>tomas.silva@example.com</code> — customer (suspended)</li>
+      <li><code>admin@example.com</code> — admin console</li>
+    </ul>
+    <p>To recreate those users on a fresh project, create them in <b>Authentication → Users</b> (or the Auth admin API) with those addresses, then re-run the four <code>update public.profiles ... from auth.users</code> statements at the end of <code>supabase-auth-rls.sql</code>.</p>
 
     <h2 id="github">5. Push to GitHub</h2>
     <p>Repository: <code>https://github.com/Ubnlord/UBS-PROFPORT</code></p>
@@ -175,7 +180,9 @@ git push -u origin main</code></pre>
 </main>
 
 <div id="toasts"></div>
-<script src="assets/core.js?v=3"></script>
+<script src="assets/config.js"></script>
+<script src="assets/data.js"></script>
+<script src="assets/core.js?v=4"></script>
 <script>
   UBS.initChrome();
   document.getElementById("langSlot").innerHTML = UBS.langSelectHTML();
