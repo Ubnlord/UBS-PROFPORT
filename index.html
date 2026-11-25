@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UBS-PROFPORT — Demo Online Banking Prototype</title>
+<meta name="description" content="UBS-PROFPORT is a UI/UX prototype of an online banking interface. Demo only — not a real bank.">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+
+<div class="demo-banner" role="alert">
+  <span class="dot" aria-hidden="true"></span>
+  <span data-i18n="banner">DEMO — not a real bank. No real money, no real cards.</span>
+</div>
+
+<header class="site-nav">
+  <div class="wrap inner">
+    <a class="brand" href="index.html">
+      <span class="brand-mark">UB</span>
+      <span>UBS-PROFPORT</span>
+    </a>
+    <nav class="nav-links">
+      <a href="#features" data-i18n="nav.features">Features</a>
+      <a href="#rates" data-i18n="nav.rates">Rates</a>
+      <a href="app.html" data-i18n="nav.signin">Sign in</a>
+      <a href="admin.html" data-i18n="nav.admin">Admin</a>
+    </nav>
+    <div class="row gap-10">
+      <span id="langSlot"></span>
+      <span id="themeSlot"></span>
+      <a class="btn sm" href="app.html" data-i18n="nav.open">Open demo</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- HERO -->
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <div class="eyebrow" data-i18n="hero.eyebrow">UI/UX prototype</div>
+        <h1 data-i18n="hero.title">Banking, designed with clarity.</h1>
+        <p class="lede" data-i18n="hero.lede">A complete online-banking interface prototype — accounts, cards, transfers, statements, loans and a full admin console. Built to be explored, not to hold money.</p>
+        <div class="hero-cta">
+          <a class="btn" href="app.html" data-i18n="hero.cta1">Explore the demo</a>
+          <a class="btn ghost" href="admin.html" data-i18n="hero.cta2">View admin console</a>
+        </div>
+        <div class="row gap-16" style="margin-top:34px;flex-wrap:wrap">
+          <span class="pill accent"><span class="dot"></span><span data-i18n="hero.badge">Demo data only</span></span>
+          <span class="pill"><span data-i18n="nav.rates">Rates</span>: USD · EUR · JPY · KRW</span>
+          <span class="pill">8 <span data-i18n="settings.language">Language</span></span>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <img src="images/hero.jpg" alt="Abstract matte black demo debit card on an off-white background" width="900" height="604">
+        <div class="hero-badge">
+          <span class="brand-mark" style="width:34px;height:34px">UB</span>
+          <div>
+            <div style="font-size:12px;font-weight:700;letter-spacing:-.01em">UBS-PROFPORT</div>
+            <div style="font-size:11px;color:var(--text-2)">Prototype · v1.0</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="section" id="features">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="eyebrow" data-i18n="feat.eyebrow">What's inside</div>
+        <h2 data-i18n="feat.title">Every screen a modern bank needs</h2>
+        <p data-i18n="feat.lede">Two separate experiences — a customer app and an operations console — sharing one clean design system.</p>
+      </div>
+      <div class="feature-grid" id="featureGrid"></div>
+    </div>
+  </section>
+
+  <!-- RATES -->
+  <section class="section" id="rates" style="padding-top:0">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="eyebrow" data-i18n="rates.eyebrow">Live market rates</div>
+        <h2 data-i18n="rates.title">Multi-currency, updated live</h2>
+        <p data-i18n="rates.lede">Indicative FX rates pulled from a public rates API, with a built-in fallback if the network is unavailable.</p>
+      </div>
+      <div class="rates-strip" id="ratesStrip"></div>
+      <div class="row gap-12" style="margin-top:16px;flex-wrap:wrap;font-size:12px;color:var(--text-3)">
+        <span><span data-i18n="rates.source">Source</span>: <b id="rateSource">—</b></span>
+        <span>·</span>
+        <span><span data-i18n="rates.updated">Updated</span>: <b id="rateUpdated">—</b></span>
+        <button class="btn xs ghost" id="refreshRates" type="button" style="margin-left:auto"></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="section" style="padding-top:0">
+    <div class="wrap">
+      <div class="cta-band">
+        <div>
+          <h2 data-i18n="cta.title">Try the full prototype</h2>
+          <p data-i18n="cta.lede">Sign in with the demo account and walk through every flow. Nothing you do here moves real money.</p>
+        </div>
+        <a class="btn" href="app.html" data-i18n="cta.btn">Open the demo app</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div style="max-width:280px">
+        <div class="brand" style="margin-bottom:10px"><span class="brand-mark">UB</span><span>UBS-PROFPORT</span></div>
+        <div style="font-size:12.5px;line-height:1.6">UI/UX prototype · <span data-i18n="hero.badge">Demo data only</span></div>
+      </div>
+      <div class="stack gap-8">
+        <b style="color:var(--text);font-size:12px;text-transform:uppercase;letter-spacing:.08em">Demo</b>
+        <a href="app.html" data-i18n="nav.signin">Sign in</a>
+        <a href="admin.html" data-i18n="nav.admin">Admin</a>
+        <a href="#rates" data-i18n="nav.rates">Rates</a>
+      </div>
+      <div class="stack gap-8">
+        <b style="color:var(--text);font-size:12px;text-transform:uppercase;letter-spacing:.08em">Project</b>
+        <a href="https://github.com/Ubnlord/UBS-PROFPORT" target="_blank" rel="noopener">GitHub repository</a>
+        <a href="setup.html">Setup guide</a>
+        <a href="supabase-schema.sql" download>Supabase schema</a>
+      </div>
+    </div>
+    <p class="footer-note" data-i18n="footer.note">UBS-PROFPORT is a fictional product built as a UI/UX prototype. It is not affiliated with any bank. All names, account numbers, card numbers, balances and transactions are sample data. No real money is held, moved or insured.</p>
+  </div>
+</footer>
+
+<div id="toasts"></div>
+<script src="assets/core.js?v=3"></script>
+<script>
+(function () {
+  UBS.initChrome();
+
+  document.getElementById("langSlot").innerHTML = UBS.langSelectHTML();
+  document.getElementById("themeSlot").innerHTML = UBS.themeBtnHTML();
+  UBS.wireLangSelect();
+  UBS.wireThemeBtn();
+
+  var FEATURES = [
+    { i: "wallet", k: "dash.accounts", d: "dash.balance" },
+    { i: "card", k: "cards.title", d: "cards.sub" },
+    { i: "send", k: "wire.title", d: "wire.sub" },
+    { i: "doc", k: "stmt.title", d: "stmt.sub" },
+    { i: "loan", k: "loan.title", d: "loan.sub" },
+    { i: "bill", k: "bill.title", d: "bill.sub" },
+    { i: "atm", k: "atm.title", d: "atm.sub" },
+    { i: "invest", k: "invest.title", d: "invest.sub" },
+    { i: "shield", k: "admin.title", d: "admin.sub" }
+  ];
+
+  function renderFeatures() {
+    document.getElementById("featureGrid").innerHTML = FEATURES.map(function (f) {
+      return '<article class="feature"><div class="fi">' + UBS.icon(f.i) + "</div>" +
+        "<h3>" + UBS.t(f.k) + "</h3><p>" + UBS.t(f.d) + "</p></article>";
+    }).join("");
+  }
+
+  var CODES = ["USD", "EUR", "JPY", "KRW"];
+  var NAMES = { USD: "US Dollar", EUR: "Euro", JPY: "Japanese Yen", KRW: "Korean Won" };
+
+  function renderRates(rates) {
+    var strip = document.getElementById("ratesStrip");
+    strip.innerHTML = CODES.map(function (c) {
+      var per = c === "USD" ? 1 : rates[c];
+      var label = c === "USD" ? "1.0000" : UBS.fmtNum(per, c === "JPY" || c === "KRW" ? 2 : 4);
+      return '<div class="rate-card"><div class="code">' + c + " · " + NAMES[c] + "</div>" +
+        '<div class="val">' + label + "</div>" +
+        '<div class="chg muted">1 USD = ' + label + " " + c + "</div></div>";
+    }).join("");
+    document.getElementById("rateSource").textContent = rates.source || "fallback";
+    document.getElementById("rateUpdated").textContent = UBS.fmtDateTime(rates.fetchedAt || Date.now());
+  }
+
+  function loadRates() {
+    var btn = document.getElementById("refreshRates");
+    btn.innerHTML = UBS.icon("refresh") + " " + UBS.t("rates.updated");
+    btn.disabled = true;
+    UBS.fetchRates().then(function (r) {
+      renderRates(r);
+      btn.disabled = false;
+    });
+  }
+
+  renderFeatures();
+  loadRates();
+  document.getElementById("refreshRates").addEventListener("click", loadRates);
+
+  document.addEventListener("ubs:lang", function () {
+    renderFeatures();
+    var r = UBS.db().rates;
+    if (r) renderRates(r);
+    document.getElementById("refreshRates").innerHTML = UBS.icon("refresh") + " " + UBS.t("rates.updated");
+  });
+})();
+</script>
+</body>
+</html>

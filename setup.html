@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UBS-PROFPORT — Setup Guide</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/app.css">
+<style>
+  .doc { max-width: 820px; margin: 0 auto; padding: 40px 0 80px; min-width: 0; overflow-wrap: anywhere; }
+  .doc h1 { font-size: clamp(28px,4vw,40px); letter-spacing: -.03em; }
+  .doc h2 { font-size: 21px; margin: 40px 0 12px; letter-spacing: -.02em; }
+  .doc h3 { font-size: 15.5px; margin: 24px 0 8px; }
+  .doc p, .doc li { font-size: 14.5px; color: var(--text-2); line-height: 1.7; }
+  .doc ul, .doc ol { padding-left: 22px; margin: 10px 0; }
+  .doc li { margin: 5px 0; }
+  .doc code { font-family: var(--mono); font-size: 12.5px; background: var(--paper-3); padding: 2px 6px; border-radius: 5px; color: var(--text); }
+  .doc pre { background: var(--ink); color: #e8e5dd; padding: 16px 18px; border-radius: 12px; overflow-x: auto; max-width: 100%; font-family: var(--mono); font-size: 12.5px; line-height: 1.65; margin: 12px 0; }
+  html[data-theme="dark"] .doc pre { background: #0a0b0d; border: 1px solid var(--line); }
+  .doc pre code { background: none; padding: 0; color: inherit; }
+  .callout { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 14px 18px; border-radius: 0 10px 10px 0; margin: 16px 0; }
+  .callout.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+  .callout p { color: var(--text); font-size: 13.5px; margin: 0; }
+  .toc { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0 8px; }
+  .toc a { font-size: 12.5px; padding: 6px 12px; border: 1px solid var(--line-strong); border-radius: 999px; color: var(--text-2); }
+  .toc a:hover { background: var(--paper-3); color: var(--text); }
+  .filetree { font-family: var(--mono); font-size: 12.5px; line-height: 1.8; background: var(--paper-3); padding: 16px 18px; border-radius: 12px; color: var(--text-2); }
+</style>
+</head>
+<body>
+
+<div class="demo-banner" role="alert">
+  <span class="dot" aria-hidden="true"></span>
+  <span data-i18n="banner">DEMO — not a real bank. No real money, no real cards.</span>
+</div>
+
+<header class="site-nav">
+  <div class="wrap inner">
+    <a class="brand" href="index.html"><span class="brand-mark">UB</span><span>UBS-PROFPORT</span></a>
+    <div class="row gap-10">
+      <span id="langSlot"></span>
+      <span id="themeSlot"></span>
+      <a class="btn sm ghost" href="index.html">← Home</a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <article class="doc">
+    <div class="eyebrow">Documentation</div>
+    <h1>Setup guide</h1>
+    <p>How to deploy this demo prototype to your GitHub repository and connect the Supabase project. You do the push yourself — this guide gives you the exact commands.</p>
+
+    <div class="callout warn">
+      <p><b>Read first:</b> UBS-PROFPORT is a UI/UX prototype. It is not a bank, holds no money, issues no real cards, and has no fee-gating of any kind. Keep the demo banner visible on every page.</p>
+    </div>
+
+    <div class="toc">
+      <a href="#files">1. What's in the project</a>
+      <a href="#local">2. Run it locally</a>
+      <a href="#supabase">3. Supabase setup</a>
+      <a href="#keys">4. Add the keys</a>
+      <a href="#github">5. Push to GitHub</a>
+      <a href="#deploy">6. Deploy</a>
+    </div>
+
+    <h2 id="files">1. What's in the project</h2>
+    <div class="filetree">
+ubs-profport/<br>
+├── index.html            ← marketing / landing page<br>
+├── app.html              ← customer dashboard (login gate)<br>
+├── admin.html            ← admin console (separate route)<br>
+├── setup.html            ← this guide<br>
+├── supabase-schema.sql   ← schema + seed for Supabase<br>
+├── assets/<br>
+│   ├── app.css           ← design system (light + dark)<br>
+│   └── core.js           ← store, i18n (8 langs), FX, UI helpers<br>
+└── images/<br>
+&nbsp;&nbsp;&nbsp;&nbsp;└── hero.png          ← hero visual
+    </div>
+    <p>Everything is static HTML/CSS/JS — no build step, no framework, no bundler. The demo state lives in the browser's <code>localStorage</code>.</p>
+
+    <h2 id="local">2. Run it locally</h2>
+    <p>Any static server works. From the project folder:</p>
+    <pre><code># Python (built in on most machines)
+python3 -m http.server 8080
+
+# or Node
+npx serve .</code></pre>
+    <p>Then open <code>http://localhost:8080</code>. Sign in with the demo account:</p>
+    <ul>
+      <li>Email: <code>alex@demo.local</code></li>
+      <li>Password: <code>demo1234</code></li>
+    </ul>
+    <p>The admin console is at <code>/admin.html</code> — a completely separate route from the customer app.</p>
+
+    <h2 id="supabase">3. Supabase setup</h2>
+    <p>Your project: <code>https://zincdoarinlonbpxiipt.supabase.co</code></p>
+    <ol>
+      <li>Open the Supabase dashboard for that project.</li>
+      <li>Go to <b>SQL Editor → New query</b>.</li>
+      <li>Paste the entire contents of <code>supabase-schema.sql</code> and click <b>Run</b>.</li>
+      <li>Confirm the tables appear under <b>Table Editor</b>: <code>profiles</code>, <code>accounts</code>, <code>cards</code>, <code>transactions</code>, <code>loans</code>, <code>requests</code>, <code>support_messages</code>, <code>fx_rates</code>.</li>
+    </ol>
+    <p>The script is idempotent — it drops and recreates the demo tables, so you can re-run it safely while iterating.</p>
+
+    <h2 id="keys">4. Add the Supabase keys</h2>
+    <p>In Supabase go to <b>Project Settings → API</b>. You need two values:</p>
+    <ul>
+      <li><b>Project URL</b> — <code>https://zincdoarinlonbpxiipt.supabase.co</code></li>
+      <li><b>anon public key</b> — safe to expose in a browser app</li>
+    </ul>
+    <p>Create a file called <code>assets/config.js</code> next to <code>core.js</code>:</p>
+    <pre><code>// assets/config.js  — safe to commit (anon key is public by design)
+window.UBS_CONFIG = {
+  SUPABASE_URL: "https://zincdoarinlonbpxiipt.supabase.co",
+  SUPABASE_ANON_KEY: "YOUR_ANON_PUBLIC_KEY"
+};</code></pre>
+    <p>Then load it in each HTML page, just before <code>core.js</code>:</p>
+    <pre><code>&lt;script src="assets/config.js"&gt;&lt;/script&gt;
+&lt;script src="assets/core.js?v=2"&gt;&lt;/script&gt;</code></pre>
+
+    <div class="callout">
+      <p><b>Never</b> put the <code>service_role</code> key in the browser. It bypasses Row Level Security. Keep it server-side only (an Edge Function or your own backend).</p>
+    </div>
+
+    <h3>Optional: read live data from Supabase</h3>
+    <p>The prototype ships with a localStorage store so it works with zero setup. To read the seeded rows instead, add the Supabase JS client and swap the store:</p>
+    <pre><code>&lt;script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"&gt;&lt;/script&gt;
+&lt;script&gt;
+  const sb = supabase.createClient(
+    UBS_CONFIG.SUPABASE_URL,
+    UBS_CONFIG.SUPABASE_ANON_KEY
+  );
+  // e.g. const { data } = await sb.from('admin_user_overview').select('*');
+&lt;/script&gt;</code></pre>
+
+    <h2 id="github">5. Push to GitHub</h2>
+    <p>Repository: <code>https://github.com/Ubnlord/UBS-PROFPORT</code></p>
+    <p>From the folder that contains the project files:</p>
+    <pre><code>git init
+git add .
+git commit -m "UBS-PROFPORT demo banking prototype"
+
+# point at your repo (HTTPS)
+git branch -M main
+git remote add origin https://github.com/Ubnlord/UBS-PROFPORT.git
+git push -u origin main</code></pre>
+    <p>If the remote already exists, use <code>git remote set-url origin …</code> instead of <code>add</code>. If the repo was created with a README, pull:</p>
+    <pre><code>git pull --rebase origin main
+git push -u origin main</code></pre>
+
+    <h3>Suggested .gitignore</h3>
+    <pre><code>node_modules/
+.DS_Store
+.env
+.env.local
+*.log</code></pre>
+    <p>Do <b>not</b> ignore <code>assets/config.js</code> — the anon key is meant to be public. Do ignore any <code>.env</code> that holds the service role key.</p>
+
+    <h2 id="deploy">6. Deploy</h2>
+    <p>Because it is fully static, any of these work with no configuration:</p>
+    <ul>
+      <li><b>GitHub Pages</b> — Settings → Pages → Source: <code>main</code> / root. Site goes live at <code>https://ubnlord.github.io/UBS-PROFPORT/</code>.</li>
+      <li><b>Netlify / Vercel / Cloudflare Pages</b> — connect the repo, leave the build command empty, publish directory <code>/</code>.</li>
+    </ul>
+    <p>After deploying, open <code>/index.html</code>, <code>/app.html</code> and <code>/admin.html</code> and confirm the demo banner shows on all three.</p>
+
+    <hr class="divider" style="margin:40px 0">
+    <p style="font-size:12.5px;color:var(--text-3)">UBS-PROFPORT is a fictional product built as a UI/UX prototype. Not affiliated with any bank. All data is sample data. No real money is held, moved or insured.</p>
+  </article>
+</main>
+
+<div id="toasts"></div>
+<script src="assets/core.js?v=3"></script>
+<script>
+  UBS.initChrome();
+  document.getElementById("langSlot").innerHTML = UBS.langSelectHTML();
+  document.getElementById("themeSlot").innerHTML = UBS.themeBtnHTML();
+  UBS.wireLangSelect();
+  UBS.wireThemeBtn();
+</script>
+</body>
+</html>
