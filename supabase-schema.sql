@@ -32,6 +32,9 @@ create table public.profiles (
   auth_user_id  uuid unique,                       -- links to auth.users when you wire real auth
   full_name     text not null,
   email         text not null unique,
+  phone         text,
+  country       text,
+  address       text,
   role          text not null default 'customer' check (role in ('customer','admin')),
   status        text not null default 'active'   check (status in ('active','suspended','blocked')),
   created_at    timestamptz not null default now()
@@ -43,7 +46,8 @@ create table public.accounts (
   profile_id      uuid not null references public.profiles(id) on delete cascade,
   account_number  text not null unique,
   account_type    text not null default 'checking' check (account_type in ('checking','savings')),
-  currency        text not null default 'USD' check (currency in ('USD','EUR','JPY','KRW')),
+  currency        text not null default 'USD'
+    check (currency in ('USD','EUR','GBP','JPY','KRW','CAD','AUD','CHF','CNY','INR','NGN','GHS','KES','ZAR','BRL','MXN','AED','SGD')),
   balance         numeric(18,2) not null default 0,
   created_at      timestamptz not null default now()
 );
@@ -72,7 +76,8 @@ create table public.transactions (
   direction     text not null check (direction in ('credit','debit')),
   description   text not null,
   amount        numeric(18,2) not null check (amount >= 0),
-  currency      text not null default 'USD' check (currency in ('USD','EUR','JPY','KRW')),
+  currency      text not null default 'USD'
+    check (currency in ('USD','EUR','GBP','JPY','KRW','CAD','AUD','CHF','CNY','INR','NGN','GHS','KES','ZAR','BRL','MXN','AED','SGD')),
   status        text not null default 'completed' check (status in ('pending','completed','rejected')),
   created_at    timestamptz not null default now()
 );
@@ -117,11 +122,137 @@ create table public.fx_rates (
   base          text primary key default 'USD',
   usd           numeric(18,6) not null default 1,
   eur           numeric(18,6) not null,
+  gbp           numeric(18,6),
   jpy           numeric(18,6) not null,
   krw           numeric(18,6) not null,
+  cad           numeric(18,6),
+  aud           numeric(18,6),
+  chf           numeric(18,6),
+  cny           numeric(18,6),
+  inr           numeric(18,6),
+  ngn           numeric(18,6),
+  ghs           numeric(18,6),
+  kes           numeric(18,6),
+  zar           numeric(18,6),
+  brl           numeric(18,6),
+  mxn           numeric(18,6),
+  aed           numeric(18,6),
+  sgd           numeric(18,6),
   source        text not null default 'fallback',
   fetched_at    timestamptz not null default now()
 );
+
+-- ============================================================
+-- 9b. NEW-SIGNUP PROVISIONING (automatic)
+--     When anyone signs up through Supabase Auth, this trigger
+--     creates their profile row, a demo account number and a
+--     demo card in one step. The user never has to do anything.
+--
+--     Options come from the signup metadata:
+--       data.full_name, data.currency, data.account_type,
+--       data.phone, data.country
+-- ============================================================
+
+-- 10-digit demo account number, grouped 4-4-2.
+create or replace function public.generate_account_number()
+returns text
+language plpgsql
+as $$
+declare
+  digits text := '';
+  i int;
+begin
+  for i in 1..10 loop
+    digits := digits || floor(random() * 10)::int::text;
+  end loop;
+  return substr(digits, 1, 4) || ' ' || substr(digits, 5, 4) || ' ' || substr(digits, 9, 2);
+end;
+$$;
+
+-- Demo card number in the reserved 4000 0000 0000 xxxx test range.
+create or replace function public.generate_card_number()
+returns text
+language plpgsql
+as $$
+declare
+  tail text := '';
+  i int;
+begin
+  for i in 1..4 loop
+    tail := tail || floor(random() * 10)::int::text;
+  end loop;
+  return '4000 0000 0000 ' || tail;
+end;
+$$;
+
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  meta        jsonb := coalesce(new.raw_user_meta_data, '{}'::jsonb);
+  v_name      text := nullif(meta->>'full_name', '');
+  v_currency  text := upper(coalesce(nullif(meta->>'currency', ''), 'USD'));
+  v_type      text := lower(coalesce(nullif(meta->>'account_type', ''), 'checking'));
+  v_phone     text := nullif(meta->>'phone', '');
+  v_country   text := nullif(meta->>'country', '');
+  v_profile   uuid;
+begin
+  -- only currencies the demo supports
+  if v_currency not in ('USD','EUR','GBP','JPY','KRW','CAD','AUD','CHF','CNY','INR','NGN','GHS','KES','ZAR','BRL','MXN','AED','SGD') then
+    v_currency := 'USD';
+  end if;
+  if v_type not in ('checking','savings') then
+    v_type := 'checking';
+  end if;
+
+  insert into public.profiles (auth_user_id, full_name, email, phone, country, role, status)
+  values (
+    new.id,
+    coalesce(v_name, split_part(new.email, '@', 1)),
+    new.email,
+    v_phone,
+    v_country,
+    'customer',
+    'active'
+  )
+  on conflict (email) do update
+    set auth_user_id = excluded.auth_user_id,
+        full_name    = coalesce(nullif(excluded.full_name, ''), public.profiles.full_name),
+        phone        = coalesce(excluded.phone, public.profiles.phone),
+        country      = coalesce(excluded.country, public.profiles.country)
+  returning id into v_profile;
+
+  -- account number + card, created together
+  if not exists (select 1 from public.accounts where profile_id = v_profile) then
+    insert into public.accounts (profile_id, account_number, account_type, currency, balance)
+    values (v_profile, public.generate_account_number(), v_type, v_currency, 0);
+  end if;
+
+  if not exists (select 1 from public.cards where profile_id = v_profile) then
+    insert into public.cards (profile_id, card_type, brand, card_number, expiry, cvv, status, is_sample)
+    values (
+      v_profile,
+      'debit',
+      'UBS-PROFPORT DEBIT',
+      public.generate_card_number(),
+      to_char(now() + interval '4 years', 'MM/YY'),
+      lpad(floor(random() * 900 + 100)::int::text, 3, '0'),
+      'active',
+      true
+    );
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
 
 -- ============================================================
 -- 10. Row Level Security
