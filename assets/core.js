@@ -189,24 +189,52 @@
   }
 
   /* ---------------- FX rates ---------------- */
-  var FALLBACK = { USD: 1, EUR: 0.921, JPY: 151.4, KRW: 1342.5, base: "USD", source: "fallback" };
+  /* Currencies the demo can hold and convert between. */
+  var CURRENCIES = [
+    { code: "USD", name: "US Dollar", symbol: "$" },
+    { code: "EUR", name: "Euro", symbol: "\u20ac" },
+    { code: "GBP", name: "British Pound", symbol: "\u00a3" },
+    { code: "JPY", name: "Japanese Yen", symbol: "\u00a5" },
+    { code: "KRW", name: "South Korean Won", symbol: "\u20a9" },
+    { code: "CAD", name: "Canadian Dollar", symbol: "C$" },
+    { code: "AUD", name: "Australian Dollar", symbol: "A$" },
+    { code: "CHF", name: "Swiss Franc", symbol: "CHF" },
+    { code: "CNY", name: "Chinese Yuan", symbol: "\u00a5" },
+    { code: "INR", name: "Indian Rupee", symbol: "\u20b9" },
+    { code: "NGN", name: "Nigerian Naira", symbol: "\u20a6" },
+    { code: "GHS", name: "Ghanaian Cedi", symbol: "GH\u20b5" },
+    { code: "KES", name: "Kenyan Shilling", symbol: "KSh" },
+    { code: "ZAR", name: "South African Rand", symbol: "R" },
+    { code: "BRL", name: "Brazilian Real", symbol: "R$" },
+    { code: "MXN", name: "Mexican Peso", symbol: "MX$" },
+    { code: "AED", name: "UAE Dirham", symbol: "AED" },
+    { code: "SGD", name: "Singapore Dollar", symbol: "S$" }
+  ];
+  var CURRENCY_CODES = CURRENCIES.map(function (c) { return c.code; });
+
+  /* Indicative fallback rates, per 1 USD. Used only when the live
+     rates API and the Supabase cache are both unreachable. */
+  var FALLBACK = {
+    USD: 1, EUR: 0.921, GBP: 0.789, JPY: 151.4, KRW: 1342.5,
+    CAD: 1.36, AUD: 1.52, CHF: 0.882, CNY: 7.24, INR: 83.3,
+    NGN: 1480, GHS: 14.6, KES: 129, ZAR: 18.4, BRL: 5.05,
+    MXN: 17.1, AED: 3.673, SGD: 1.34,
+    base: "USD", source: "fallback"
+  };
   var FX_ENDPOINTS = [
     "https://open.er-api.com/v6/latest/USD",
-    "https://api.frankfurter.app/latest?from=USD&to=EUR,JPY,KRW"
+    "https://api.frankfurter.app/latest?from=USD&to=EUR,GBP,JPY,KRW,CAD,AUD,CHF,CNY,INR,ZAR,BRL,MXN,SGD"
   ];
 
   function normalizeRates(payload, src) {
     var r = payload && (payload.rates || payload);
     if (!r || typeof r.EUR !== "number") return null;
-    return {
-      USD: 1,
-      EUR: r.EUR,
-      JPY: r.JPY,
-      KRW: r.KRW,
-      base: "USD",
-      source: src,
-      fetchedAt: Date.now()
-    };
+    var out = { base: "USD", source: src, fetchedAt: Date.now() };
+    CURRENCY_CODES.forEach(function (code) {
+      if (typeof r[code] === "number") out[code] = r[code];
+    });
+    out.USD = 1;
+    return out;
   }
 
   function fetchRates() {
@@ -241,8 +269,19 @@
 
   function convert(amount, from, to, rates) {
     rates = rates || (db().rates || FALLBACK);
-    var usd = Number(amount) / (rates[from] || 1);
-    return usd * (rates[to] || 1);
+    var usd = Number(amount) / (rates[from] || FALLBACK[from] || 1);
+    return usd * (rates[to] || FALLBACK[to] || 1);
+  }
+
+  function currencyName(code) {
+    var c = CURRENCIES.filter(function (x) { return x.code === code; })[0];
+    return c ? c.name : code;
+  }
+  function currencyOptions(selected) {
+    return CURRENCIES.map(function (c) {
+      return '<option value="' + c.code + '"' + (c.code === selected ? " selected" : "") + ">" +
+        c.code + " \u2014 " + c.name + "</option>";
+    }).join("");
   }
 
   /* ---------------- i18n ---------------- */
@@ -312,9 +351,39 @@
       "settings.title": "Settings", "settings.sub": "Appearance and preferences.",
       "settings.theme": "Dark mode", "settings.language": "Language", "settings.reset": "Reset demo data",
       "settings.resetnote": "Clears all demo data in this browser and restores the seed.",
+      "settings.profile": "Profile details", "settings.profilesub": "Your name and contact details on this demo account.",
+      "settings.fullname": "Full name", "settings.phone": "Phone", "settings.country": "Country",
+      "settings.address": "Address", "settings.saveprofile": "Save profile",
+      "settings.security": "Security", "settings.securitysub": "Change the password for this demo account.",
+      "settings.newpassword": "New password", "settings.confirmpassword": "Confirm new password",
+      "settings.changepassword": "Change password", "settings.passwordmismatch": "The two passwords do not match.",
+      "settings.passwordshort": "Use at least 8 characters.",
+      "settings.currency": "Account currency", "settings.currencysub": "Choose the currency your account is held in. Your balance is converted at the current rate.",
+      "settings.currentcurrency": "Current currency", "settings.changecurrency": "Change currency",
+      "settings.currencynote": "Changing currency converts your balance at the live rate. This is a demo conversion only.",
+      "settings.account": "Account details", "settings.accountsub": "Your demo account number and card.",
+      "settings.accountnumber": "Account number", "settings.accounttype": "Account type",
+      "settings.member": "Member since", "settings.issuecard": "Issue another demo card",
+      "settings.cardissued": "Demo card issued",
       "login.title": "Sign in to the demo", "login.sub": "Use the demo account below. No real credentials are needed.",
       "login.demo": "Demo account", "login.fill": "Fill demo credentials", "login.error": "Email or password is incorrect.",
       "login.blocked": "This demo account is blocked. Try the admin console to unblock it.",
+      "login.noaccount": "New here? Create a demo account",
+      "signup.title": "Create a demo account", "signup.sub": "Open a demo account and get an account number and a card automatically. No real money is involved.",
+      "signup.name": "Full name", "signup.email": "Email", "signup.password": "Password",
+      "signup.confirm": "Confirm password", "signup.phone": "Phone (optional)", "signup.country": "Country (optional)",
+      "signup.currency": "Preferred currency", "signup.accounttype": "Account type",
+      "signup.submit": "Create account", "signup.haveaccount": "Already have an account? Sign in",
+      "signup.success": "Account created \u2014 your account number and card are ready.",
+      "signup.confirmemail": "Check your email to confirm the account, then sign in.",
+      "signup.error": "Could not create the account. Try a different email.",
+      "signup.weakpassword": "Use at least 8 characters.",
+      "signup.mismatch": "The two passwords do not match.",
+      "signup.terms": "This is a demo prototype. No real account, card or money is created.",
+      "convert.title": "Currency converter", "convert.sub": "Convert between currencies at the current indicative rate.",
+      "convert.from": "From", "convert.to": "To", "convert.amount": "Amount", "convert.result": "Converted amount",
+      "convert.rate": "Rate", "convert.swap": "Swap", "convert.note": "Indicative rates only \u2014 no money moves.",
+      "nav.convert": "Convert",
       "admin.title": "Operations console", "admin.sub": "Manage demo users, requests and support.",
       "admin.users": "Users", "admin.requests": "Requests", "admin.loans": "Loans", "admin.inbox": "Support inbox",
       "admin.overview": "Overview", "admin.totalusers": "Total users", "admin.totalbal": "Total balances",
@@ -328,6 +397,15 @@
       "admin.deposit": "Deposit", "admin.withdrawal": "Withdrawal", "admin.atm": "ATM card", "admin.loan": "Loan",
       "admin.acct": "Account", "admin.created": "Created", "admin.youradmin": "Admin console",
       "admin.separate": "This console is a separate route from the customer app.",
+      "admin.newusersub": "An account number and a demo card are created automatically.",
+      "admin.accounttype": "Account type", "admin.issuecard": "Issue a demo card",
+      "admin.issuecardbtn": "Issue card", "admin.cardissued": "Demo card issued",
+      "admin.edituser": "Edit user", "admin.editusersub": "Update this demo user's details.",
+      "admin.phone": "Phone", "admin.country": "Country", "admin.address": "Address",
+      "admin.accountnumber": "Account number", "admin.regenerate": "Regenerate",
+      "admin.changecurrency": "Change currency", "admin.currencysub": "Convert this account's balance to another currency at the current rate.",
+      "admin.convertnote": "The balance is converted at the live indicative rate. Demo only.",
+      "admin.cards": "Cards", "admin.nocards": "No cards yet.",
       "toast.saved": "Saved", "toast.sent": "Sent", "toast.submitted": "Submitted for review",
       "toast.copied": "Copied", "toast.reset": "Demo data reset", "toast.insufficient": "Insufficient demo balance",
       "toast.filled": "Demo credentials filled", "toast.frozen": "Card frozen", "toast.unfrozen": "Card unfrozen",
@@ -1042,6 +1120,8 @@
     updateUser: updateUser, addTransaction: addTransaction, addRequest: addRequest, addMessage: addMessage,
     fmtMoney: fmtMoney, fmtNum: fmtNum, fmtDate: fmtDate, fmtDateTime: fmtDateTime, initials: initials,
     fetchRates: fetchRates, convert: convert, FALLBACK: FALLBACK,
+    CURRENCIES: CURRENCIES, CURRENCY_CODES: CURRENCY_CODES,
+    currencyName: currencyName, currencyOptions: currencyOptions,
     t: t, lang: lang, setLang: setLang, applyI18n: applyI18n, LANGS: LANGS, I18N: I18N,
     langSelectHTML: langSelectHTML, wireLangSelect: wireLangSelect,
     theme: theme, setTheme: setTheme, toggleTheme: toggleTheme, themeBtnHTML: themeBtnHTML, wireThemeBtn: wireThemeBtn,

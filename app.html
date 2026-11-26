@@ -48,6 +48,71 @@
       <a href="index.html" style="font-size:12.5px;color:var(--text-2)">← <span data-i18n="nav.home">Home</span></a>
       <a href="admin.html" style="font-size:12.5px;color:var(--text-2)" data-i18n="nav.admin">Admin</a>
     </div>
+
+    <hr class="divider" style="margin:20px 0">
+    <button class="btn block ghost" id="showSignup" type="button" data-i18n="login.noaccount">New here? Create a demo account</button>
+  </div>
+</div>
+
+<!-- ============ SIGN UP ============ -->
+<div id="signupGate" class="wrap-narrow hide" style="padding:56px 0 80px">
+  <div class="card pad-lg" style="max-width:560px;margin:0 auto">
+    <div class="brand" style="margin-bottom:22px"><span class="brand-mark">UB</span><span>UBS-PROFPORT</span></div>
+    <h1 style="font-size:26px" data-i18n="signup.title">Create a demo account</h1>
+    <p class="muted" style="font-size:13.5px;margin-top:8px" data-i18n="signup.sub">Open a demo account and get an account number and a card automatically. No real money is involved.</p>
+
+    <form id="signupForm" class="form-grid" style="margin-top:20px">
+      <div class="field full">
+        <label for="suName" data-i18n="signup.name">Full name</label>
+        <input class="input" id="suName" autocomplete="name" required>
+      </div>
+      <div class="field full">
+        <label for="suEmail" data-i18n="signup.email">Email</label>
+        <input class="input" id="suEmail" type="email" autocomplete="email" required>
+      </div>
+      <div class="field">
+        <label for="suPassword" data-i18n="signup.password">Password</label>
+        <input class="input" id="suPassword" type="password" autocomplete="new-password" minlength="8" required>
+      </div>
+      <div class="field">
+        <label for="suConfirm" data-i18n="signup.confirm">Confirm password</label>
+        <input class="input" id="suConfirm" type="password" autocomplete="new-password" minlength="8" required>
+      </div>
+      <div class="field">
+        <label for="suPhone" data-i18n="signup.phone">Phone (optional)</label>
+        <input class="input" id="suPhone" type="tel" autocomplete="tel">
+      </div>
+      <div class="field">
+        <label for="suCountry" data-i18n="signup.country">Country (optional)</label>
+        <input class="input" id="suCountry" autocomplete="country-name">
+      </div>
+      <div class="field">
+        <label for="suCurrency" data-i18n="signup.currency">Preferred currency</label>
+        <select class="input" id="suCurrency"></select>
+      </div>
+      <div class="field">
+        <label for="suType" data-i18n="signup.accounttype">Account type</label>
+        <select class="input" id="suType">
+          <option value="checking" data-i18n="internal.checking">Checking account</option>
+          <option value="savings" data-i18n="internal.savings">Savings account</option>
+        </select>
+      </div>
+      <div class="full">
+        <div id="signupError" class="pill danger hide" style="justify-content:center"></div>
+        <div id="signupOk" class="pill ok hide" style="justify-content:center"></div>
+      </div>
+      <div class="full">
+        <button class="btn block" type="submit" data-i18n="signup.submit">Create account</button>
+      </div>
+      <div class="full">
+        <p class="dim" style="font-size:12px;margin:0" data-i18n="signup.terms">This is a demo prototype. No real account, card or money is created.</p>
+      </div>
+    </form>
+
+    <div class="row gap-10" style="margin-top:18px;justify-content:space-between;flex-wrap:wrap">
+      <button class="btn xs ghost" id="backToLogin" type="button">← <span data-i18n="common.signin">Sign in</span></button>
+      <a href="index.html" style="font-size:12.5px;color:var(--text-2)">← <span data-i18n="nav.home">Home</span></a>
+    </div>
   </div>
 </div>
 
@@ -64,6 +129,7 @@
     <div class="side-label" data-i18n="nav.transfer">Transfer</div>
     <a class="side-link" data-view="wire">${icon:send}<span data-i18n="nav.transfer">Transfer</span></a>
     <a class="side-link" data-view="internal">${icon:refresh}<span data-i18n="act.internal">Internal transfer</span></a>
+    <a class="side-link" data-view="convert">${icon:globe}<span data-i18n="nav.convert">Convert</span></a>
     <a class="side-link" data-view="statement">${icon:doc}<span data-i18n="nav.statement">Statement</span></a>
 
     <div class="side-label" data-i18n="nav.loans">Loans</div>
@@ -203,6 +269,44 @@
       </div>
     </section>
 
+    <!-- CONVERT -->
+    <section class="view" id="view-convert">
+      <div class="grid-2 even">
+        <div class="card">
+          <div class="card-title" data-i18n="convert.title">Currency converter</div>
+          <div class="card-sub" data-i18n="convert.sub">Convert between currencies at the current indicative rate.</div>
+          <hr class="divider">
+          <form id="convertForm" class="stack gap-14" style="gap:14px">
+            <div class="field">
+              <label data-i18n="convert.amount">Amount</label>
+              <input class="input" id="cvAmount" type="number" min="0" step="0.01" value="100" required>
+            </div>
+            <div class="field">
+              <label data-i18n="convert.from">From</label>
+              <select class="input" id="cvFrom"></select>
+            </div>
+            <div class="field">
+              <label data-i18n="convert.to">To</label>
+              <select class="input" id="cvTo"></select>
+            </div>
+            <div class="row gap-8">
+              <button class="btn block" type="submit" data-i18n="convert.title">Currency converter</button>
+              <button class="btn ghost" type="button" id="cvSwap" data-i18n="convert.swap">Swap</button>
+            </div>
+          </form>
+        </div>
+        <div class="card">
+          <div class="card-title" style="margin-bottom:12px" data-i18n="convert.result">Converted amount</div>
+          <div class="balance-card" style="margin-bottom:14px">
+            <div class="label" data-i18n="convert.result">Converted amount</div>
+            <div class="amount" id="cvResult">—</div>
+            <div class="acct" id="cvRate">—</div>
+          </div>
+          <p class="dim" style="font-size:12px;margin:0" data-i18n="convert.note">Indicative rates only — no money moves.</p>
+        </div>
+      </div>
+    </section>
+
     <!-- STATEMENT -->
     <section class="view" id="view-statement">
       <div class="card">
@@ -326,6 +430,89 @@
     <section class="view" id="view-settings">
       <div class="grid-2 even">
         <div class="card">
+          <div class="card-title" data-i18n="settings.profile">Profile details</div>
+          <div class="card-sub" data-i18n="settings.profilesub">Your name and contact details on this demo account.</div>
+          <hr class="divider">
+          <form id="profileForm" class="form-grid">
+            <div class="field full">
+              <label data-i18n="settings.fullname">Full name</label>
+              <input class="input" id="pfName" required>
+            </div>
+            <div class="field">
+              <label data-i18n="settings.phone">Phone</label>
+              <input class="input" id="pfPhone" type="tel">
+            </div>
+            <div class="field">
+              <label data-i18n="settings.country">Country</label>
+              <input class="input" id="pfCountry">
+            </div>
+            <div class="field full">
+              <label data-i18n="settings.address">Address</label>
+              <input class="input" id="pfAddress">
+            </div>
+            <div class="field full">
+              <label data-i18n="common.email">Email</label>
+              <input class="input" id="pfEmail" disabled>
+            </div>
+            <div class="full">
+              <button class="btn block" type="submit" data-i18n="settings.saveprofile">Save profile</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="card-title" data-i18n="settings.currency">Account currency</div>
+          <div class="card-sub" data-i18n="settings.currencysub">Choose the currency your account is held in. Your balance is converted at the current rate.</div>
+          <hr class="divider">
+          <div class="spread" style="padding:6px 0 14px">
+            <div style="font-size:13px;color:var(--text-2)" data-i18n="settings.currentcurrency">Current currency</div>
+            <div style="font-weight:650" id="setCurNow">—</div>
+          </div>
+          <div class="field">
+            <label data-i18n="settings.currency">Account currency</label>
+            <select class="input" id="setCurrency"></select>
+          </div>
+          <button class="btn block" id="changeCurrencyBtn" style="margin-top:12px" data-i18n="settings.changecurrency">Change currency</button>
+          <p class="dim" style="font-size:12px;margin-top:10px" data-i18n="settings.currencynote">Changing currency converts your balance at the live rate. This is a demo conversion only.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-title" data-i18n="settings.account">Account details</div>
+          <div class="card-sub" data-i18n="settings.accountsub">Your demo account number and card.</div>
+          <hr class="divider">
+          <div class="spread" style="padding:8px 0">
+            <div style="font-size:13px;color:var(--text-2)" data-i18n="settings.accountnumber">Account number</div>
+            <div class="mono" style="font-weight:600" id="setAcctNo">—</div>
+          </div>
+          <div class="spread" style="padding:8px 0;border-top:1px solid var(--line)">
+            <div style="font-size:13px;color:var(--text-2)" data-i18n="settings.accounttype">Account type</div>
+            <div style="font-weight:600" id="setAcctType">—</div>
+          </div>
+          <div class="spread" style="padding:8px 0;border-top:1px solid var(--line)">
+            <div style="font-size:13px;color:var(--text-2)" data-i18n="settings.member">Member since</div>
+            <div style="font-weight:600" id="setMember">—</div>
+          </div>
+          <button class="btn block ghost" id="issueCardBtn" style="margin-top:12px" data-i18n="settings.issuecard">Issue another demo card</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title" data-i18n="settings.security">Security</div>
+          <div class="card-sub" data-i18n="settings.securitysub">Change the password for this demo account.</div>
+          <hr class="divider">
+          <form id="passwordForm" class="stack gap-14" style="gap:14px">
+            <div class="field">
+              <label data-i18n="settings.newpassword">New password</label>
+              <input class="input" id="pwNew" type="password" autocomplete="new-password" minlength="8" required>
+            </div>
+            <div class="field">
+              <label data-i18n="settings.confirmpassword">Confirm new password</label>
+              <input class="input" id="pwConfirm" type="password" autocomplete="new-password" minlength="8" required>
+            </div>
+            <button class="btn block" type="submit" data-i18n="settings.changepassword">Change password</button>
+          </form>
+        </div>
+
+        <div class="card">
           <div class="card-title" data-i18n="settings.title">Settings</div>
           <div class="card-sub" data-i18n="settings.sub">Appearance and preferences.</div>
           <hr class="divider">
@@ -338,6 +525,7 @@
             <span id="langSlot2"></span>
           </div>
         </div>
+
         <div class="card">
           <div class="card-title" data-i18n="settings.reset">Reset demo data</div>
           <div class="card-sub" data-i18n="settings.resetnote">Clears all demo data in this browser and restores the seed.</div>
@@ -373,6 +561,7 @@
 
   var user = null;
   var gate = document.getElementById("loginGate");
+  var signupGate = document.getElementById("signupGate");
   var root = document.getElementById("appRoot");
 
   /* ---------- login (real Supabase Auth) ---------- */
@@ -381,6 +570,54 @@
     document.getElementById("password").value = "demo1234";
     UBS.toast(UBS.t("toast.filled"));
   });
+
+  /* ---------- sign up ---------- */
+  document.getElementById("suCurrency").innerHTML = UBS.currencyOptions("USD");
+  document.getElementById("showSignup").addEventListener("click", function () {
+    gate.classList.add("hide");
+    signupGate.classList.remove("hide");
+    window.scrollTo({ top: 0 });
+  });
+  document.getElementById("backToLogin").addEventListener("click", function () {
+    signupGate.classList.add("hide");
+    gate.classList.remove("hide");
+  });
+  document.getElementById("signupForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var err = document.getElementById("signupError");
+    var ok = document.getElementById("signupOk");
+    err.classList.add("hide"); ok.classList.add("hide");
+    var pw = document.getElementById("suPassword").value;
+    var pw2 = document.getElementById("suConfirm").value;
+    if (pw.length < 8) { err.textContent = UBS.t("signup.weakpassword"); err.classList.remove("hide"); return; }
+    if (pw !== pw2) { err.textContent = UBS.t("signup.mismatch"); err.classList.remove("hide"); return; }
+    var btn = e.target.querySelector("button[type=submit]");
+    if (btn) { btn.disabled = true; btn.textContent = "\u2026"; }
+    UBS.signup({
+      name: document.getElementById("suName").value,
+      email: document.getElementById("suEmail").value,
+      password: pw,
+      phone: document.getElementById("suPhone").value,
+      country: document.getElementById("suCountry").value,
+      currency: document.getElementById("suCurrency").value,
+      accountType: document.getElementById("suType").value
+    }).then(function (res) {
+      if (btn) { btn.disabled = false; btn.textContent = UBS.t("signup.submit"); }
+      if (res && res.needsConfirmation) {
+        ok.textContent = UBS.t("signup.confirmemail");
+        ok.classList.remove("hide");
+        return;
+      }
+      user = UBS.currentUser();
+      if (user) { showApp(); UBS.toast(UBS.t("signup.success")); }
+      else { ok.textContent = UBS.t("signup.confirmemail"); ok.classList.remove("hide"); }
+    }).catch(function (ex) {
+      if (btn) { btn.disabled = false; btn.textContent = UBS.t("signup.submit"); }
+      err.textContent = (ex && ex.message) || UBS.t("signup.error");
+      err.classList.remove("hide");
+    });
+  });
+
   document.getElementById("loginForm").addEventListener("submit", function (e) {
     e.preventDefault();
     var btn = e.target.querySelector("button[type=submit]");
@@ -434,6 +671,7 @@
   var TITLES = {
     overview: ["nav.overview", "dash.hello"], cards: ["nav.cards", "cards.sub"],
     wire: ["wire.title", "wire.sub"], internal: ["internal.title", "internal.sub"],
+    convert: ["convert.title", "convert.sub"],
     statement: ["stmt.title", "stmt.sub"], loans: ["loan.title", "loan.sub"],
     bills: ["bill.title", "bill.sub"], atm: ["atm.title", "atm.sub"],
     invest: ["invest.title", "invest.sub"], support: ["support.title", "support.sub"],
@@ -461,6 +699,8 @@
     if (view === "loans") renderLoans();
     if (view === "support") renderSupport();
     if (view === "internal") renderAccounts();
+    if (view === "convert") renderConvert();
+    if (view === "settings") renderSettings();
     if (view === "invest") renderInvest();
     if (view === "atm") renderAtm();
     if (view === "wire") renderMiniTx("wireTx");
@@ -597,6 +837,111 @@
       '<div class="spread" style="padding:14px;border:1px solid var(--line);border-radius:12px"><div><div style="font-size:13px;font-weight:600">' + UBS.t("internal.checking") + '</div><div class="mono dim" style="font-size:11.5px">' + user.accountNumber + '</div></div><div style="font-weight:650">' + UBS.fmtMoney(user.balance, cur) + "</div></div>" +
       '<div class="spread" style="padding:14px;border:1px solid var(--line);border-radius:12px"><div><div style="font-size:13px;font-weight:600">' + UBS.t("internal.savings") + '</div><div class="mono dim" style="font-size:11.5px">' + user.accountNumber.replace(/\d{4}$/, "9021") + '</div></div><div style="font-weight:650">' + UBS.fmtMoney(12400, cur) + "</div></div>";
   }
+
+  /* ---------- convert ---------- */
+  function renderConvert() {
+    refreshUser();
+    var from = document.getElementById("cvFrom");
+    var to = document.getElementById("cvTo");
+    if (!from.options.length) {
+      from.innerHTML = UBS.currencyOptions(user ? user.currency : "USD");
+      to.innerHTML = UBS.currencyOptions("EUR");
+    }
+    doConvert();
+  }
+  function doConvert() {
+    var rates = UBS.db().rates || UBS.FALLBACK;
+    var amt = parseFloat(document.getElementById("cvAmount").value) || 0;
+    var from = document.getElementById("cvFrom").value;
+    var to = document.getElementById("cvTo").value;
+    var out = UBS.convert(amt, from, to, rates);
+    document.getElementById("cvResult").textContent = UBS.fmtMoney(out, to);
+    var unit = UBS.convert(1, from, to, rates);
+    document.getElementById("cvRate").textContent = "1 " + from + " = " + UBS.fmtNum(unit, 4) + " " + to;
+  }
+  document.getElementById("convertForm").addEventListener("submit", function (e) { e.preventDefault(); doConvert(); });
+  document.getElementById("cvAmount").addEventListener("input", doConvert);
+  document.getElementById("cvFrom").addEventListener("change", doConvert);
+  document.getElementById("cvTo").addEventListener("change", doConvert);
+  document.getElementById("cvSwap").addEventListener("click", function () {
+    var f = document.getElementById("cvFrom");
+    var t = document.getElementById("cvTo");
+    var tmp = f.value; f.value = t.value; t.value = tmp;
+    doConvert();
+  });
+
+  /* ---------- settings ---------- */
+  function renderSettings() {
+    refreshUser();
+    if (!user) return;
+    document.getElementById("pfName").value = user.name || "";
+    document.getElementById("pfPhone").value = user.phone || "";
+    document.getElementById("pfCountry").value = user.country || "";
+    document.getElementById("pfAddress").value = user.address || "";
+    document.getElementById("pfEmail").value = user.email || "";
+    document.getElementById("setCurNow").textContent = user.currency + " \u2014 " + UBS.currencyName(user.currency);
+    var sel = document.getElementById("setCurrency");
+    sel.innerHTML = UBS.currencyOptions(user.currency);
+    document.getElementById("setAcctNo").textContent = user.accountNumber;
+    var acct = (user.accounts || []).filter(function (a) { return a.type === "checking"; })[0] || (user.accounts || [])[0];
+    document.getElementById("setAcctType").textContent = acct ? UBS.t("internal." + acct.type) : "\u2014";
+    document.getElementById("setMember").textContent = user.createdAt ? UBS.fmtDate(user.createdAt) : "\u2014";
+  }
+
+  document.getElementById("profileForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var name = document.getElementById("pfName").value.trim();
+    if (!name) return;
+    UBS.saveProfile(user.id, {
+      name: name,
+      phone: document.getElementById("pfPhone").value.trim(),
+      country: document.getElementById("pfCountry").value.trim(),
+      address: document.getElementById("pfAddress").value.trim()
+    }).then(function () {
+      refreshUser(); renderHeader(); renderSettings();
+      UBS.toast(UBS.t("toast.saved"));
+    }).catch(function (ex) { UBS.toast((ex && ex.message) || "Could not save", "error"); });
+  });
+
+  document.getElementById("changeCurrencyBtn").addEventListener("click", function () {
+    var target = document.getElementById("setCurrency").value;
+    if (!user || target === user.currency) { UBS.toast(UBS.t("toast.updated")); return; }
+    var rates = UBS.db().rates || UBS.FALLBACK;
+    var converted = UBS.convert(user.balance, user.currency, target, rates);
+    UBS.modal({
+      title: UBS.t("settings.changecurrency"),
+      sub: UBS.t("settings.currencynote"),
+      body: '<div class="stack gap-10" style="font-size:13.5px">' +
+        '<div class="spread"><span class="muted">' + user.currency + '</span><b>' + UBS.fmtMoney(user.balance, user.currency) + '</b></div>' +
+        '<div class="spread"><span class="muted">' + target + '</span><b>' + UBS.fmtMoney(converted, target) + '</b></div></div>',
+      confirmText: UBS.t("common.confirm"),
+      onConfirm: function () {
+        UBS.changeCurrency(user.id, target).then(function () {
+          refreshUser(); renderHeader(); renderSettings(); renderOverview();
+          UBS.toast(UBS.t("toast.updated"));
+        }).catch(function (ex) { UBS.toast((ex && ex.message) || "Could not change currency", "error"); });
+      }
+    });
+  });
+
+  document.getElementById("issueCardBtn").addEventListener("click", function () {
+    UBS.issueCard(user.id, "debit").then(function () {
+      refreshUser(); renderCards(); renderSettings();
+      UBS.toast(UBS.t("settings.cardissued"));
+    }).catch(function (ex) { UBS.toast((ex && ex.message) || "Could not issue card", "error"); });
+  });
+
+  document.getElementById("passwordForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var a = document.getElementById("pwNew").value;
+    var b = document.getElementById("pwConfirm").value;
+    if (a.length < 8) { UBS.toast(UBS.t("settings.passwordshort"), "error"); return; }
+    if (a !== b) { UBS.toast(UBS.t("settings.passwordmismatch"), "error"); return; }
+    UBS.changePassword(a).then(function () {
+      e.target.reset();
+      UBS.toast(UBS.t("toast.saved"));
+    }).catch(function (ex) { UBS.toast((ex && ex.message) || "Could not change password", "error"); });
+  });
 
   function renderStatement() {
     refreshUser();
@@ -779,6 +1124,7 @@
     renderAtm();
     renderInvest();
     renderSupport();
+    renderSettings();
     renderMiniTx("wireTx");
     renderMiniTx("billTx");
     go("overview");
