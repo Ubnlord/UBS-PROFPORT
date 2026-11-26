@@ -14,6 +14,12 @@
   var ANON = CFG.SUPABASE_ANON_KEY || "";
   var SKEY = "ubs_sb_session_v1";
 
+  /* Currencies the demo supports. Kept in sync with assets/core.js. */
+  var CURRENCY_CODES = [
+    "USD", "EUR", "GBP", "JPY", "KRW", "CAD", "AUD", "CHF", "CNY",
+    "INR", "NGN", "GHS", "KES", "ZAR", "BRL", "MXN", "AED", "SGD"
+  ];
+
   var cache = { users: [], rates: null, profile: null, isAdmin: false, ready: false };
 
   /* ---------------- session ---------------- */
@@ -69,6 +75,16 @@
   }
 
   /* ---------------- auth ---------------- */
+  function storeAuth(data) {
+    writeSession({
+      access_token: data.access_token,
+      refresh_token: data.refresh_token,
+      expires_at: Date.now() + (data.expires_in || 3600) * 1000,
+      user: data.user
+    });
+    return data.user;
+  }
+
   function signIn(email, password) {
     return fetch(BASE + "/auth/v1/token?grant_type=password", {
       method: "POST",
@@ -81,15 +97,79 @@
           err.code = data.error_code || data.error || "invalid";
           throw err;
         }
-        writeSession({
-          access_token: data.access_token,
-          refresh_token: data.refresh_token,
-          expires_at: Date.now() + (data.expires_in || 3600) * 1000,
-          user: data.user
-        });
-        return data.user;
+        return storeAuth(data);
       });
     });
+  }
+
+  /* Create a demo account. The Supabase trigger
+     public.handle_new_user() provisions the profile, the account
+     number and the demo card automatically. If the project has not
+     had that migration applied yet, we fall back to creating the
+     rows from the browser once a session exists. */
+  function signUp(opts) {
+    var meta = {
+      full_name: String(opts.name || "").trim(),
+      currency: opts.currency || "USD",
+      account_type: opts.accountType || "checking",
+      phone: opts.phone || null,
+      country: opts.country || null
+    };
+    return fetch(BASE + "/auth/v1/signup", {
+      method: "POST",
+      headers: { apikey: ANON, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: String(opts.email || "").trim(),
+        password: opts.password,
+        data: meta
+      })
+    }).then(function (res) {
+      return res.json().then(function (data) {
+        if (!res.ok) {
+          var err = new Error(data.error_description || data.msg || data.message || "Sign-up failed");
+          err.code = data.error_code || data.error || "signup_failed";
+          throw err;
+        }
+        /* Email confirmation ON: no session yet, user must confirm. */
+        if (!data.access_token) {
+          return { needsConfirmation: true, user: data.user || null };
+        }
+        storeAuth(data);
+        return ensureProvisioned(meta).then(function () {
+          return { needsConfirmation: false, user: data.user };
+        });
+      });
+    });
+  }
+
+  /* Fallback provisioning for projects without the DB trigger. */
+  function ensureProvisioned(meta) {
+    var uid = authUserId();
+    if (!uid) return Promise.resolve(null);
+    return rest("profiles?select=*&auth_user_id=eq." + encodeURIComponent(uid)).then(function (rows) {
+      if (rows && rows.length) return rows[0];
+      var s = readSession();
+      return rest("profiles", {
+        method: "POST",
+        body: {
+          auth_user_id: uid,
+          full_name: meta.full_name || "New customer",
+          email: (s && s.user && s.user.email) || "",
+          phone: meta.phone || null,
+          country: meta.country || null,
+          role: "customer",
+          status: "active"
+        },
+        headers: { Prefer: "return=representation" }
+      }).then(function (created) {
+        var p = created && created[0];
+        if (!p) return null;
+        return provisionAccountAndCard(p.id, {
+          currency: meta.currency,
+          accountType: meta.account_type
+        }).then(function () { return p; });
+      });
+    }).catch(function () { return null; });
   }
 
   function refresh() {
@@ -102,13 +182,7 @@
     }).then(function (res) {
       return res.json().then(function (data) {
         if (!res.ok) { writeSession(null); throw new Error("session expired"); }
-        writeSession({
-          access_token: data.access_token,
-          refresh_token: data.refresh_token,
-          expires_at: Date.now() + (data.expires_in || 3600) * 1000,
-          user: data.user
-        });
-        return data.user;
+        return storeAuth(data);
       });
     });
   }
@@ -122,6 +196,22 @@
       method: "POST",
       headers: { apikey: ANON, Authorization: "Bearer " + tok }
     }).catch(function () {}).then(function () {});
+  }
+
+  /* Change the signed-in user's password. */
+  function changePassword(newPassword) {
+    var tok = accessToken();
+    if (!tok) return Promise.reject(new Error("not signed in"));
+    return fetch(BASE + "/auth/v1/user", {
+      method: "PUT",
+      headers: { apikey: ANON, Authorization: "Bearer " + tok, "Content-Type": "application/json" },
+      body: JSON.stringify({ password: newPassword })
+    }).then(function (res) {
+      return res.json().then(function (data) {
+        if (!res.ok) throw new Error(data.error_description || data.msg || "Could not change password");
+        return data;
+      });
+    });
   }
 
   /* ---------------- load ---------------- */
@@ -171,8 +261,12 @@
         auth_user_id: p.auth_user_id,
         name: p.full_name,
         email: p.email,
+        phone: p.phone || "",
+        country: p.country || "",
+        address: p.address || "",
         role: p.role,
         status: p.status,
+        createdAt: p.created_at ? new Date(p.created_at).getTime() : null,
         accountNumber: checking ? checking.account_number : "\u2014",
         balance: checking ? Number(checking.balance) : 0,
         currency: checking ? checking.currency : "USD",
@@ -207,19 +301,88 @@
     });
   }
 
-  /* ---------------- mutations ---------------- */
-  function checkingAccountId(profileId) {
+  /* ---------------- helpers ---------------- */
+  function checkingAccount(profileId) {
     var u = cache.users.filter(function (x) { return x.id === profileId; })[0];
     if (!u) return null;
-    var c = (u.accounts || []).filter(function (a) { return a.type === "checking"; })[0];
-    return c ? c.id : (u.accounts && u.accounts[0] ? u.accounts[0].id : null);
+    return (u.accounts || []).filter(function (a) { return a.type === "checking"; })[0] ||
+      (u.accounts && u.accounts[0]) || null;
+  }
+  function checkingAccountId(profileId) {
+    var a = checkingAccount(profileId);
+    return a ? a.id : null;
   }
 
+  /* 10-digit demo account number, grouped 4-4-2. */
+  function generateAccountNumber() {
+    var digits = "";
+    for (var i = 0; i < 10; i++) digits += String(Math.floor(Math.random() * 10));
+    return digits.slice(0, 4) + " " + digits.slice(4, 8) + " " + digits.slice(8, 10);
+  }
+
+  /* Demo card number in the reserved 4000 0000 0000 xxxx test range. */
+  function generateCardNumber() {
+    var tail = "";
+    for (var i = 0; i < 4; i++) tail += String(Math.floor(Math.random() * 10));
+    return "4000 0000 0000 " + tail;
+  }
+  function generateExpiry() {
+    var now = new Date();
+    var y = (now.getFullYear() + 4) % 100;
+    var m = now.getMonth() + 1;
+    return (m < 10 ? "0" + m : String(m)) + "/" + (y < 10 ? "0" + y : String(y));
+  }
+  function generateCvv() {
+    return String(Math.floor(100 + Math.random() * 900));
+  }
+
+  /* Create the checking account + first demo card for a profile. */
+  function provisionAccountAndCard(profileId, opts) {
+    opts = opts || {};
+    var currency = CURRENCY_CODES.indexOf(opts.currency) >= 0 ? opts.currency : "USD";
+    var acctType = opts.accountType === "savings" ? "savings" : "checking";
+    var number = opts.accountNumber || generateAccountNumber();
+
+    return rest("accounts", {
+      method: "POST",
+      body: {
+        profile_id: profileId,
+        account_number: number,
+        account_type: acctType,
+        currency: currency,
+        balance: Number(opts.balance) || 0
+      },
+      headers: { Prefer: "return=representation" }
+    }).then(function (rows) {
+      var acct = rows && rows[0];
+      if (opts.issueCard === false) return acct;
+      return rest("cards", {
+        method: "POST",
+        body: {
+          profile_id: profileId,
+          card_type: "debit",
+          brand: "UBS-PROFPORT DEBIT",
+          card_number: generateCardNumber(),
+          expiry: generateExpiry(),
+          cvv: generateCvv(),
+          status: "active",
+          is_sample: true
+        },
+        headers: { Prefer: "return=minimal" }
+      }).then(function () { return acct; });
+    });
+  }
+
+  /* ---------------- mutations ---------------- */
   function updateProfile(id, patch) {
     var body = {};
     if (patch.status != null) body.status = patch.status;
     if (patch.name != null) body.full_name = patch.name;
     if (patch.role != null) body.role = patch.role;
+    if (patch.phone != null) body.phone = patch.phone;
+    if (patch.country != null) body.country = patch.country;
+    if (patch.address != null) body.address = patch.address;
+    if (!Object.keys(body).length) return Promise.resolve(null);
     return rest("profiles?id=eq." + encodeURIComponent(id), {
       method: "PATCH", body: body, headers: { Prefer: "return=minimal" }
     });
@@ -230,6 +393,27 @@
     if (!accId) return Promise.reject(new Error("no account"));
     return rest("accounts?id=eq." + encodeURIComponent(accId), {
       method: "PATCH", body: { balance: Number(balance) }, headers: { Prefer: "return=minimal" }
+    });
+  }
+
+  /* Change an account's currency. The balance is converted at the
+     supplied rate so the account keeps its value. */
+  function setAccountCurrency(profileId, currency, convertedBalance) {
+    var accId = checkingAccountId(profileId);
+    if (!accId) return Promise.reject(new Error("no account"));
+    if (CURRENCY_CODES.indexOf(currency) < 0) return Promise.reject(new Error("unsupported currency"));
+    var body = { currency: currency };
+    if (convertedBalance != null) body.balance = Number(convertedBalance);
+    return rest("accounts?id=eq." + encodeURIComponent(accId), {
+      method: "PATCH", body: body, headers: { Prefer: "return=minimal" }
+    });
+  }
+
+  function setAccountNumber(profileId, number) {
+    var accId = checkingAccountId(profileId);
+    if (!accId) return Promise.reject(new Error("no account"));
+    return rest("accounts?id=eq." + encodeURIComponent(accId), {
+      method: "PATCH", body: { account_number: String(number).trim() }, headers: { Prefer: "return=minimal" }
     });
   }
 
@@ -280,6 +464,25 @@
     });
   }
 
+  /* Issue an extra demo card for a profile. */
+  function issueCard(profileId, opts) {
+    opts = opts || {};
+    return rest("cards", {
+      method: "POST",
+      body: {
+        profile_id: profileId,
+        card_type: opts.cardType === "credit" ? "credit" : "debit",
+        brand: opts.cardType === "credit" ? "UBS-PROFPORT CREDIT" : "UBS-PROFPORT DEBIT",
+        card_number: generateCardNumber(),
+        expiry: generateExpiry(),
+        cvv: generateCvv(),
+        status: "active",
+        is_sample: true
+      },
+      headers: { Prefer: "return=minimal" }
+    });
+  }
+
   function updateRequest(id, status) {
     return rest("requests?id=eq." + encodeURIComponent(id), {
       method: "PATCH", body: { status: status }, headers: { Prefer: "return=minimal" }
@@ -292,33 +495,28 @@
     });
   }
 
+  /* Admin-side user creation: profile + account number + card. */
   function createProfile(opts) {
-    var acct = String(Math.floor(1000 + Math.random() * 9000)) + " " +
-      String(Math.floor(1000 + Math.random() * 9000)) + " " +
-      String(Math.floor(1000 + Math.random() * 9000));
     return rest("profiles", {
       method: "POST",
-      body: { full_name: opts.name, email: opts.email, role: "customer", status: "active" },
+      body: {
+        full_name: opts.name,
+        email: opts.email,
+        phone: opts.phone || null,
+        country: opts.country || null,
+        role: "customer",
+        status: "active"
+      },
       headers: { Prefer: "return=representation" }
     }).then(function (rows) {
       var p = rows && rows[0];
       if (!p) throw new Error("profile not created");
-      return rest("accounts", {
-        method: "POST",
-        body: {
-          profile_id: p.id, account_number: acct, account_type: "checking",
-          currency: opts.currency || "USD", balance: Number(opts.balance) || 0
-        },
-        headers: { Prefer: "return=minimal" }
-      }).then(function () {
-        return rest("cards", {
-          method: "POST",
-          body: {
-            profile_id: p.id, card_type: "debit", brand: "UBS-PROFPORT DEBIT",
-            card_number: "4000 0000 0000 0000", expiry: "12/29", cvv: "123", status: "active"
-          },
-          headers: { Prefer: "return=minimal" }
-        });
+      return provisionAccountAndCard(p.id, {
+        currency: opts.currency,
+        accountType: opts.accountType,
+        balance: opts.balance,
+        accountNumber: opts.accountNumber,
+        issueCard: opts.issueCard
       }).then(function () { return p; });
     });
   }
@@ -331,21 +529,27 @@
     return q("fx_rates", "select=*&limit=1").then(function (rows) {
       var r = rows && rows[0];
       if (!r) return null;
-      return {
-        USD: 1, EUR: Number(r.eur), JPY: Number(r.jpy), KRW: Number(r.krw),
-        base: "USD", source: "supabase cache", fetchedAt: new Date(r.fetched_at).getTime()
-      };
+      var out = { base: "USD", source: "supabase cache", fetchedAt: new Date(r.fetched_at).getTime() };
+      CURRENCY_CODES.forEach(function (code) {
+        var v = r[code.toLowerCase()];
+        if (typeof v === "number") out[code] = v;
+      });
+      if (typeof out.USD !== "number") out.USD = 1;
+      return out;
     }).catch(function () { return null; });
   }
 
   /* ---------------- public ---------------- */
   global.UBSData = {
     configured: !!(BASE && ANON),
+    CURRENCY_CODES: CURRENCY_CODES,
     session: session,
     authUserId: authUserId,
     signIn: signIn,
+    signUp: signUp,
     signOut: signOut,
     refresh: refresh,
+    changePassword: changePassword,
     loadAll: loadAll,
     cache: function () { return cache; },
     currentUser: function () {
@@ -358,13 +562,18 @@
     isAdmin: function () { return cache.isAdmin; },
     updateProfile: updateProfile,
     setBalance: setBalance,
+    setAccountCurrency: setAccountCurrency,
+    setAccountNumber: setAccountNumber,
     addTransaction: addTransaction,
     addRequest: addRequest,
     addMessage: addMessage,
     updateCard: updateCard,
+    issueCard: issueCard,
     updateRequest: updateRequest,
     updateLoan: updateLoan,
     createProfile: createProfile,
+    provisionAccountAndCard: provisionAccountAndCard,
+    generateAccountNumber: generateAccountNumber,
     getRates: getRates,
     setRates: setRates,
     loadFxCache: loadFxCache
