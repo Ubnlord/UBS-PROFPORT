@@ -281,6 +281,7 @@
       }
       actions += '<button class="btn xs ghost" data-act="fund" data-uid="' + u.id + '">' + UBS.t("admin.fund") + "</button>";
       actions += '<button class="btn xs ghost" data-act="withdraw" data-uid="' + u.id + '">' + UBS.t("admin.withdraw") + "</button>";
+      actions += '<button class="btn xs ghost" data-act="edit" data-uid="' + u.id + '">' + UBS.t("admin.edituser") + "</button>";
       return "<tr><td><div class='user-cell'><div class='avatar'>" + UBS.initials(u.name) + "</div><div><div style='font-weight:600;font-size:13px'>" + u.name + "</div><div class='dim' style='font-size:11px'>" + u.email + "</div></div></div></td>" +
         "<td class='mono' style='font-size:12px'>" + u.accountNumber + "</td>" +
         "<td style='font-weight:600'>" + UBS.fmtMoney(u.balance, u.currency) + "</td>" +
@@ -448,6 +449,7 @@
       var act = b.getAttribute("data-act");
       var u = UBS.db().users.filter(function (x) { return x.id === uid; })[0];
       if (!u) return;
+      if (act === "edit") { openEditUser(u); return; }
       if (act === "suspend") { UBS.updateUser(uid, { status: "suspended" }).then(function () { UBS.toast(UBS.t("toast.updated")); renderAll(); }); }
       if (act === "block") { UBS.updateUser(uid, { status: "blocked" }).then(function () { UBS.toast(UBS.t("toast.updated")); renderAll(); }); }
       if (act === "activate") { UBS.updateUser(uid, { status: "active" }).then(function () { UBS.toast(UBS.t("toast.updated")); renderAll(); }); }
@@ -522,13 +524,17 @@
   function openCreateUser() {
     UBS.modal({
       title: UBS.t("admin.newuser"),
-      sub: UBS.t("admin.sub"),
+      sub: UBS.t("admin.newusersub"),
       body:
         '<div class="form-grid">' +
         '<div class="field full"><label>' + UBS.t("admin.name") + '</label><input class="input" id="nuName" required></div>' +
         '<div class="field full"><label>' + UBS.t("common.email") + '</label><input class="input" id="nuEmail" type="email" required></div>' +
+        '<div class="field"><label>' + UBS.t("admin.phone") + '</label><input class="input" id="nuPhone" type="tel"></div>' +
+        '<div class="field"><label>' + UBS.t("admin.country") + '</label><input class="input" id="nuCountry"></div>' +
         '<div class="field"><label>' + UBS.t("admin.opening") + '</label><input class="input" id="nuBal" type="number" min="0" step="0.01" value="0"></div>' +
-        '<div class="field"><label>' + UBS.t("admin.currency") + '</label><select class="input" id="nuCur"><option>USD</option><option>EUR</option><option>JPY</option><option>KRW</option></select></div>' +
+        '<div class="field"><label>' + UBS.t("admin.currency") + '</label><select class="input" id="nuCur">' + UBS.currencyOptions("USD") + '</select></div>' +
+        '<div class="field"><label>' + UBS.t("admin.accounttype") + '</label><select class="input" id="nuType"><option value="checking">' + UBS.t("internal.checking") + '</option><option value="savings">' + UBS.t("internal.savings") + '</option></select></div>' +
+        '<div class="field"><label>' + UBS.t("admin.issuecard") + '</label><label class="row gap-8" style="align-items:center;font-size:13px"><input type="checkbox" id="nuCard" checked> ' + UBS.t("admin.issuecard") + '</label></div>' +
         "</div>",
       confirmText: UBS.t("admin.createuser"),
       onConfirm: function (back) {
@@ -540,9 +546,14 @@
           UBS.toast("Email already exists", "error"); return false;
         }
         UBSData.createProfile({
-          name: name, email: email,
+          name: name,
+          email: email,
+          phone: back.querySelector("#nuPhone").value.trim(),
+          country: back.querySelector("#nuCountry").value.trim(),
           balance: parseFloat(back.querySelector("#nuBal").value) || 0,
-          currency: back.querySelector("#nuCur").value
+          currency: back.querySelector("#nuCur").value,
+          accountType: back.querySelector("#nuType").value,
+          issueCard: !!back.querySelector("#nuCard").checked
         }).then(function () {
           UBS.toast(UBS.t("toast.created"));
           return UBS.reload();
@@ -554,6 +565,69 @@
   }
   document.getElementById("createUserBtn").addEventListener("click", openCreateUser);
   document.getElementById("createUserBtn2").addEventListener("click", openCreateUser);
+
+  /* ---------- edit user: details, currency, account number, cards ---------- */
+  function openEditUser(u) {
+    UBS.modal({
+      title: UBS.t("admin.edituser") + " \u2014 " + u.name,
+      sub: UBS.t("admin.editusersub"),
+      body:
+        '<div class="form-grid">' +
+        '<div class="field full"><label>' + UBS.t("admin.name") + '</label><input class="input" id="euName" value="' + escapeHtml(u.name) + '"></div>' +
+        '<div class="field"><label>' + UBS.t("admin.phone") + '</label><input class="input" id="euPhone" type="tel" value="' + escapeHtml(u.phone || "") + '"></div>' +
+        '<div class="field"><label>' + UBS.t("admin.country") + '</label><input class="input" id="euCountry" value="' + escapeHtml(u.country || "") + '"></div>' +
+        '<div class="field full"><label>' + UBS.t("admin.address") + '</label><input class="input" id="euAddress" value="' + escapeHtml(u.address || "") + '"></div>' +
+        '<div class="field"><label>' + UBS.t("admin.accountnumber") + '</label><input class="input mono" id="euAcct" value="' + escapeHtml(u.accountNumber) + '"></div>' +
+        '<div class="field"><label>' + UBS.t("admin.currency") + '</label><select class="input" id="euCur">' + UBS.currencyOptions(u.currency) + '</select></div>' +
+        "</div>" +
+        '<p class="dim" style="font-size:12px;margin:12px 0 0">' + UBS.t("admin.convertnote") + "</p>" +
+        '<div style="margin-top:14px"><div class="card-title" style="font-size:13px;margin-bottom:8px">' + UBS.t("admin.cards") + "</div>" +
+        ((u.cards && u.cards.length)
+          ? u.cards.map(function (c) {
+              return '<div class="spread" style="padding:8px 0;border-top:1px solid var(--line)"><div><div class="mono" style="font-size:12px">' + c.number + '</div>' +
+                '<div class="dim" style="font-size:11px">' + c.type + " \u00b7 " + c.expiry + "</div></div>" +
+                UBS.statusPill(c.status) + "</div>";
+            }).join("")
+          : '<div class="empty">' + UBS.t("admin.nocards") + "</div>") +
+        '<button class="btn xs ghost" id="euIssue" style="margin-top:10px">' + UBS.t("admin.issuecardbtn") + "</button></div>",
+      confirmText: UBS.t("common.save"),
+      onOpen: function (back) {
+        back.querySelector("#euIssue").addEventListener("click", function () {
+          UBS.issueCard(u.id, "debit").then(function () {
+            UBS.toast(UBS.t("admin.cardissued"));
+            back.remove();
+            renderAll();
+          }).catch(function (err) { UBS.toast((err && err.message) || "Could not issue card", "error"); });
+        });
+        back.querySelector("#euAcct").addEventListener("input", function () {
+          /* keep the input to digits, spaces and dashes */
+          this.value = this.value.replace(/[^\d \-]/g, "");
+        });
+      },
+      onConfirm: function (back) {
+        var name = back.querySelector("#euName").value.trim();
+        if (!name) return false;
+        var newCur = back.querySelector("#euCur").value;
+        var newAcct = back.querySelector("#euAcct").value.trim();
+        var jobs = [
+          UBS.saveProfile(u.id, {
+            name: name,
+            phone: back.querySelector("#euPhone").value.trim(),
+            country: back.querySelector("#euCountry").value.trim(),
+            address: back.querySelector("#euAddress").value.trim()
+          })
+        ];
+        if (newCur && newCur !== u.currency) jobs.push(UBS.changeCurrency(u.id, newCur));
+        if (newAcct && newAcct !== u.accountNumber) jobs.push(UBS.setAccountNumber(u.id, newAcct));
+        Promise.all(jobs).then(function () {
+          UBS.toast(UBS.t("toast.updated"));
+          return UBS.reload();
+        }).then(renderAll).catch(function (err) {
+          UBS.toast((err && err.message) || "Could not update user", "error");
+        });
+      }
+    });
+  }
 
   document.addEventListener("ubs:lang", function () {
     var active = document.querySelector(".view.active");
