@@ -58,9 +58,11 @@ create policy "profiles update own or admin" on public.profiles
   using (auth_user_id = auth.uid() or public.is_admin())
   with check (auth_user_id = auth.uid() or public.is_admin());
 
+-- A brand-new signup may create its own profile row (browser fallback
+-- for projects that have not installed the signup trigger yet).
 create policy "profiles insert admin" on public.profiles
   for insert to authenticated
-  with check (public.is_admin());
+  with check (public.is_admin() or auth_user_id = auth.uid());
 
 -- ---------- 5. accounts ----------
 create policy "accounts select own or admin" on public.accounts
@@ -72,9 +74,10 @@ create policy "accounts update own or admin" on public.accounts
   using (profile_id = public.my_profile_id() or public.is_admin())
   with check (profile_id = public.my_profile_id() or public.is_admin());
 
+-- Self-provisioning: a user may open their own first account.
 create policy "accounts insert admin" on public.accounts
   for insert to authenticated
-  with check (public.is_admin());
+  with check (public.is_admin() or profile_id = public.my_profile_id());
 
 -- ---------- 6. cards ----------
 create policy "cards select own or admin" on public.cards
@@ -86,9 +89,10 @@ create policy "cards update own or admin" on public.cards
   using (profile_id = public.my_profile_id() or public.is_admin())
   with check (profile_id = public.my_profile_id() or public.is_admin());
 
+-- Self-provisioning: a user may receive their own first card.
 create policy "cards insert admin" on public.cards
   for insert to authenticated
-  with check (public.is_admin());
+  with check (public.is_admin() or profile_id = public.my_profile_id());
 
 -- ---------- 7. transactions ----------
 create policy "tx select own or admin" on public.transactions
