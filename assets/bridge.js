@@ -53,10 +53,46 @@
   UBS.logout = function () { return D.signOut(); };
   UBS.reload = function () { return D.loadAll(); };
 
+  /* ---- sign-up: profile + account number + card, automatically ---- */
+  UBS.signup = function (opts) {
+    return D.signUp(opts).then(function (res) {
+      if (res && res.needsConfirmation) return res;
+      return D.loadAll().then(function () { return res; });
+    });
+  };
+
+  /* ---- profile / settings ---- */
+  UBS.saveProfile = function (id, patch) {
+    return D.updateProfile(id, patch).then(function () { return D.loadAll(); });
+  };
+
+  UBS.changePassword = function (pw) { return D.changePassword(pw); };
+
+  /* ---- currency: change the account's currency, converting the balance ---- */
+  UBS.changeCurrency = function (userId, newCurrency) {
+    var u = UBS.db().users.filter(function (x) { return x.id === userId; })[0];
+    if (!u) return Promise.reject(new Error("no user"));
+    var rates = D.getRates() || UBS.FALLBACK;
+    var converted = UBS.convert(u.balance, u.currency, newCurrency, rates);
+    return D.setAccountCurrency(userId, newCurrency, converted)
+      .then(function () { return D.loadAll(); });
+  };
+
+  /* ---- cards ---- */
+  UBS.issueCard = function (userId, cardType) {
+    return D.issueCard(userId, { cardType: cardType }).then(function () { return D.loadAll(); });
+  };
+
+  /* ---- account number ---- */
+  UBS.setAccountNumber = function (userId, number) {
+    return D.setAccountNumber(userId, number).then(function () { return D.loadAll(); });
+  };
+
   /* ---- mutations ---- */
   UBS.updateUser = function (id, patch) {
     var jobs = [];
-    if (patch.status != null || patch.name != null || patch.role != null) {
+    if (patch.status != null || patch.name != null || patch.role != null ||
+        patch.phone != null || patch.country != null || patch.address != null) {
       jobs.push(D.updateProfile(id, patch));
     }
     if (patch.balance != null) jobs.push(D.setBalance(id, patch.balance));
